@@ -1,2 +1,3 @@
 # TeslaDecrypt
-Decryption Tool
+Decryption tool for TeslaCrypt ransomware
+(http://blogs.cisco.com/security/talos/teslacrypt)
