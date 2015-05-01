@@ -27,10 +27,12 @@
 #include "targetver.h"
 
 #define WIN32_LEAN_AND_MEAN             // Escludere gli elementi utilizzati di rado dalle intestazioni di Windows
+					// Exclude some items from the Windows header. See MSDN for more details.
 // File di intestazione di Windows:
-#include <windows.h>
+#include <windows.h>			// Windows header files
 
 // File di intestazione Runtime C
+// C Runtime File Headers
 #include <stdlib.h>
 #include <stdio.h>
 #include <malloc.h>
