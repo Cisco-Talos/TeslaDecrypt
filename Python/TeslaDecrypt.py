@@ -42,9 +42,9 @@ except ImportError:
 
 def main():
     print("TeslaCrypt Decryption Tool 0.1")
-    #print("Emmanuel Tacheau and Andrea Allievi")
-    print("Copyright (C) 2015 Talos Security Intelligence and Research Group")
-    print("Cisco Systems Inc.\n")
+    #print("http://blogs.cisco.com/security/talos/teslacrypt")
+    print("Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group")
+
     try:
         import argparse
     except ImportError:
