@@ -374,7 +374,7 @@ bool CVersionInfo::GetModuleVersionInfo(HMODULE hMod) {
 	retVal = GetModuleFileName(hMod, modFileName, MAX_PATH);
 	if (!retVal) {
 		delete modFileName;
-		::WriteToLog(L"CLog::GetModuleVersion - Error while getting module fileName...");
+		::WriteToLog(L"CLog::GetModuleVersion - Error while getting module filename...");
 		return false;
 	}
 	retVal = GetModuleVersionInfo(modFileName);
