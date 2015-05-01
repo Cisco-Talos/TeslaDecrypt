@@ -58,8 +58,8 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                             epilog=dedent('''
                                 The command:
-                                \n  python TeslaDecrypt.py --fic abc.py.ecc --decrypt --key 04684d9d06102effe5cadd3b218d61e37a4c693b995a6cb76db2978a2dbfd2e2
-                                \nshould produce output like: \n  "Wrote decrypted file abc.py.ecc.dec" where aby.py.ecc.dec is the decrypted file
+                                \n\tpython TeslaDecrypt.py --fic abc.py.ecc --decrypt --key 04684d9d06102effe5cadd3b218d61e37a4c693b995a6cb76db2978a2dbfd2e2
+                                \nshould produce output like: \n\t"Wrote decrypted file abc.py.ecc.dec" where aby.py.ecc.dec is the decrypted file
                                 '''))
     parser.add_argument('--fic',
                         type=argparse.FileType('rb'),
