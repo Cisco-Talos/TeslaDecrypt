@@ -41,9 +41,3 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	CTeslaDecrypterApp theApp;
 	return theApp.Main(argc, argv);
 }
-
-// Console application entry point
-int _tmain(int argc, _TCHAR* argv[])
-{	
-	// pass
-}
