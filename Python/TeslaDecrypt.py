@@ -25,9 +25,9 @@
  *               The result will produce a file named file_encrypted.dec using AES 256 CBC mode
  *
  *               Encrypted files are defined as follow:
- *               First 16 bytes are the IV
- *               The next 4 bytes are the length of the file
- *               Followed by the encrypted data
+ *               First 16 bytes are containing IV
+ *               Then with 4 bytes is the length of the file
+ *               Then the encrypted data
  *
  *	Last revision: 04/17/2015
  *
@@ -37,18 +37,18 @@ try:
     from Crypto.Cipher import AES
     from Crypto.Hash import SHA256
 except ImportError:
-    print 'You must have the pycrypto module installed'
+    print 'You must have pycrypto module installed'
     exit
 
 def main():
-    print("TeslaCrypt Decryption Tool 0.1")
-    #print("http://blogs.cisco.com/security/talos/teslacrypt")
-    print("Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group")
-
+    print("TeslaCrypt Decryption Tool 0.2")
+    #print("Emmanuel Tacheau and Andrea Allievi")
+    print("Copyright (C) 2015 Talos Security Intelligence and Research Group")
+    print("Cisco Systems Inc.\n")
     try:
         import argparse
     except ImportError:
-        print 'You have to install the argparse python module'
+        print 'You have to install argparse python module'
         exit
 
     import sys
@@ -57,9 +57,9 @@ def main():
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                             epilog=dedent('''
-                                The command:
-                                \n\tpython TeslaDecrypt.py --fic abc.py.ecc --decrypt --key 04684d9d06102effe5cadd3b218d61e37a4c693b995a6cb76db2978a2dbfd2e2
-                                \nshould produce output like: \n\t"Wrote decrypted file abc.py.ecc.dec" where aby.py.ecc.dec is the decrypted file
+                                Running for example :
+                                \npython TeslaDecrypt.py --fic abc.py.ecc --decrypt --key 04684d9d06102effe5cadd3b218d61e37a4c693b995a6cb76db2978a2dbfd2e2
+                                should produce output like "Wrote decrypted file abc.py.ecc.dec" where aby.py.ecc.dec is the decrypted file
                                 '''))
     parser.add_argument('--fic',
                         type=argparse.FileType('rb'),
@@ -92,8 +92,10 @@ def main():
     cipher_key=None
     iv_key=None
 
+	# E.T - 05/04/2015 
+	# Fixed: cipher_key must be a binary data
     if args.key:
-        cipher_key= args.key
+        cipher_key= binascii.unhexlify(args.key)
 
     encrypted=None
     cleardata=None
@@ -138,9 +140,9 @@ def main():
                 print >> sys.stderr, "Exception: %s" % str(e)
                 return
             # encrypted data is using the following format
-            # first 16 bytes are the IV
-            # next 4 bytes are the file length
-            # finally rest of the file is the encrypted data
+            # first 16 bytes are containing IV
+            # then next 4 bytes are containing file length
+            # finally rest of file is containing encrypted data
             # Noticed: Bytes are 2 hex digits, so number are * by 2
             if dataencrypted and cipher_key:
                 iv_key=dataencrypted[:16]
