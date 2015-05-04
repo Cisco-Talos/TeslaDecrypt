@@ -32,8 +32,6 @@
  *	Last revision: 04/17/2015
  *
 '''
-import os
-
 try:
     from Crypto.Cipher import AES
     from Crypto.Hash import SHA256
@@ -42,14 +40,14 @@ except ImportError:
     exit
 
 try:
-        import argparse
-    except ImportError:
-        print 'You have to install argparse python module'
-        exit
+    import argparse
+except ImportError:
+    print 'You have to install argparse python module'
+    exit
 
-    import sys
-    import binascii
-    from textwrap import dedent
+import sys, os
+import binascii
+from textwrap import dedent
 
 def main():
     print("TeslaCrypt Decryption Tool 0.2")
