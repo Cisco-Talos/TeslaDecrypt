@@ -32,6 +32,7 @@
  *	Last revision: 04/17/2015
  *
 '''
+import os
 
 try:
     from Crypto.Cipher import AES
@@ -40,12 +41,7 @@ except ImportError:
     print 'You must have pycrypto module installed'
     exit
 
-def main():
-    print("TeslaCrypt Decryption Tool 0.2")
-    #print("Emmanuel Tacheau and Andrea Allievi")
-    print("Copyright (C) 2015 Talos Security Intelligence and Research Group")
-    print("Cisco Systems Inc.\n")
-    try:
+try:
         import argparse
     except ImportError:
         print 'You have to install argparse python module'
@@ -54,6 +50,13 @@ def main():
     import sys
     import binascii
     from textwrap import dedent
+
+def main():
+    print("TeslaCrypt Decryption Tool 0.2")
+    #print("Emmanuel Tacheau and Andrea Allievi")
+    print("Copyright (C) 2015 Talos Security Intelligence and Research Group")
+    print("Cisco Systems Inc.\n")
+    
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                             epilog=dedent('''
@@ -160,7 +163,6 @@ def main():
 
             if cleardata:
                 try:
-                    import os
                     output_tuple = os.path.splitext(args.fic.name)
                     if (output_tuple[1] == '.ecc'):
                         output_tuple = os.path.splitext(output_tuple[0])
@@ -197,4 +199,4 @@ def main():
         parser.print_help()
 
 if __name__ == '__main__':
-    main()
+  main()
