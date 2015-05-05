@@ -83,10 +83,10 @@ void CTeslaDecrypterApp::ShowUsage() {
 		L"Where:\r\n"
 		L"/help - Show this help message\r\n"
 		L"/key - Manually specify the master key for decryption (32 bytes/64 digits)\r\n"
-		L"/keyfile - Specify the \"key.dat\" file used to recover the master key.\r\n"
+		L"/keyfile - Specify the \"key.dat\" file used to recover the master key\r\n"
 		L"/file - Decrypt an encrypted file\r\n"
 		L"/dir - Decrypt all \".ecc\" files in the target directory and its subdirectories\r\n"
-		L"/scanEntirePc - Decrypt all \".ecc\" files on your computer\r\n"
+		L"/scanEntirePc - Decrypt all \".ecc\" files on computer\r\n"
 		L"/KeepOriginal - Keep original file(s) through the decryption process\r\n"
 		L"/deleteTeslaCrypt - Automatically kill and delete the TeslaCrypt dropper\r\n";
 
@@ -166,7 +166,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			dwStrLen = wcslen(strKeyFile);
 			if (!FileExists(strKeyFile)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"File \"%s\" does not exists.", strKeyFile);
+				wprintf(L"Key file \"%s\" does not exist.", strKeyFile);
 				return true;
 			}
 		}
@@ -177,7 +177,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			strOrgFile = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgFile)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"File \"%s\" does not exists.\r\n", strOrgFile);
+				wprintf(L"File \"%s\" does not exist.\r\n", strOrgFile);
 				return true;
 			}
 		}
@@ -188,7 +188,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			strOrgDir = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgDir)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"Directory \"%s\" does not exists.\r\n", strOrgDir);
+				wprintf(L"Directory \"%s\" does not exist.\r\n", strOrgDir);
 				return true;
 			}
 		}
@@ -255,7 +255,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		cl_wprintf(RED, L"Error!\r\n");
 		if (strOrgDir)
 			wprintf(L"Errors while decrypting files.\r\n"
-			L"See the log file for the details.\r\n");
+			L"See log file for details.\r\n");
 	}
 
 	return true;
