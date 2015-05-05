@@ -553,8 +553,3 @@ LPBYTE CTeslaDecrypter::HexToBytes(LPTSTR hexString, DWORD strSize) {
 }
 
 #pragma endregion
-
-
-// .... and then.. What else? ....
-// An italian Lucano maybe??? Ahahahah :-)
-//
