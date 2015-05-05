@@ -83,10 +83,10 @@ void CTeslaDecrypterApp::ShowUsage() {
 		L"Where:\r\n"
 		L"/help - Show this help message\r\n"
 		L"/key - Manually specify the master key for decryption (32 bytes/64 digits)\r\n"
-		L"/keyfile - Specify the \"key.dat\" file used to recover the master key\r\n"
+		L"/keyfile - Specify the \"key.dat\" file used to recover the master key.\r\n"
 		L"/file - Decrypt an encrypted file\r\n"
 		L"/dir - Decrypt all \".ecc\" files in the target directory and its subdirectories\r\n"
-		L"/scanEntirePc - Decrypt all \".ecc\" files on computer\r\n"
+		L"/scanEntirePc - Decrypt all \".ecc\" files on your computer\r\n"
 		L"/KeepOriginal - Keep original file(s) through the decryption process\r\n"
 		L"/deleteTeslaCrypt - Automatically kill and delete the TeslaCrypt dropper\r\n";
 
@@ -105,11 +105,10 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 	DWORD dwStrLen = 0;								// String size in TCHARs
 	BYTE masterKey[32] = {0};						// Specific master key 
 	bool bKeepOriginal = false;						// TRUE if the user has specified to keep the original files
-	bool bCmdLineInvalid = false;					// TRUE if the command line is correct
 	bool bScanEntirePc = false;						// TRUE if I have to scan the entire Pc
 	bool bDeleteDropper = false;					// TRUE if I have to automatically search and delete TeslaCrypt dropper
 
-	BOOL bRetVal = FALSE;
+	bool bRetVal = false;
 
 	for (int i = 1; i < argc; i++) {
 		LPTSTR arg = argv[i];
@@ -167,7 +166,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			dwStrLen = wcslen(strKeyFile);
 			if (!FileExists(strKeyFile)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"Key file \"%s\" does not exist.", strKeyFile);
+				wprintf(L"File \"%s\" does not exists.", strKeyFile);
 				return true;
 			}
 		}
@@ -178,7 +177,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			strOrgFile = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgFile)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"File \"%s\" does not exist.\r\n", strOrgFile);
+				wprintf(L"File \"%s\" does not exists.\r\n", strOrgFile);
 				return true;
 			}
 		}
@@ -189,7 +188,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			strOrgDir = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgDir)) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"Directory \"%s\" does not exist.\r\n", strOrgDir);
+				wprintf(L"Directory \"%s\" does not exists.\r\n", strOrgDir);
 				return true;
 			}
 		}
@@ -207,7 +206,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		LPTSTR impKey = SearchAndImportKeyFile();
 		// The above call modifies the "KeepOriginal" policy, correct this
 		GetDecrypter()->KeepOriginalFiles(bKeepOriginal);						// Another non-sense comment: The pen is on the table!!!
-		if (impKey) {delete impKey; bRetVal = TRUE; }
+		if (impKey) {delete impKey; bRetVal = true; }
 	}
 	
 	if (!bRetVal) {
@@ -256,7 +255,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		cl_wprintf(RED, L"Error!\r\n");
 		if (strOrgDir)
 			wprintf(L"Errors while decrypting files.\r\n"
-			L"See log file for details.\r\n");
+			L"See the log file for the details.\r\n");
 	}
 
 	return true;
@@ -264,7 +263,7 @@ bool CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 
 // Normal application startup without any command line
 int CTeslaDecrypterApp::NoCmdLineMain() {
-	BOOL bRetVal = FALSE;
+	bool bRetVal = false;
 	DWORD dwStrLen = 0;
 	LPTSTR appDataStr = NULL;					// %APPDATA% full path
 	LPTSTR keyDatPath = NULL;					// "key.dat" file standard location
@@ -288,7 +287,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 	// Search the TeslaCrypt process (if any)
 	bRetVal = SearchAndKillTeslaProc(true);
 
-	wprintf(L"Would you like to attempt to decrypt all files encrypted by TeslaCrypt on this computer? [Y/N] ");
+	wprintf(L"Would you like to attempt to decrypt all files encrypted by TeslaCrypt \r\non this computer? [Y/N] ");
 	wscanf_s(L"%4s", answer, COUNTOF(answer));
 	if (CHR_UPR(answer[0]) == 'Y') bDoEntirePcDecrypt = true;
 
@@ -341,7 +340,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 			cl_wprintf(RED, L"Error!\r\n");
 	}
 
-	return (bRetVal != 0 ? 1 : -1);
+	return (bRetVal ? 1 : -1);
 }
 
 // Main application entry point
@@ -452,7 +451,7 @@ DWORD CTeslaDecrypterApp::SearchForTeslaCryptProcess(LPTSTR lpFileFullPath, DWOR
 					dwFoundProcId = dwCurProcId;
 
 					g_pLog->WriteLine(L"Searching for TeslaCrypt process - Found TeslaCrypt process (ID: %i - Full Path: \"%s\")",
-						(LPVOID)dwCurProcId, modEntry.szExePath);
+							(LPVOID)dwCurProcId, modEntry.szExePath);
 
 					if (lpFileFullPath) {
 						// Copy the process full path in the target buffer 
@@ -471,7 +470,7 @@ DWORD CTeslaDecrypterApp::SearchForTeslaCryptProcess(LPTSTR lpFileFullPath, DWOR
 	if (lpMemBuff) VirtualFree(lpMemBuff, 0, MEM_RELEASE);
 
 	if (!dwFoundProcId)
-		g_pLog->WriteLine(L"Searching for TeslaCrypt process - No active TeslaCrypt process found in this system!");
+		g_pLog->WriteLine(L"SearchForTeslaCryptProcess - No active TeslaCrypt process found in this system!");
 
 	return dwFoundProcId;
 }
@@ -529,7 +528,8 @@ bool CTeslaDecrypterApp::SearchAndKillTeslaProc(bool bAskUser, bool bKill, bool 
 
 		if (!bRetVal) {			// if target process was successfully killed
 			cl_wprintf(RED, L"Error! ");
-			wprintf(L"Unable to terminate TeslaCrypt process!\r\n");
+			wprintf(L"Unable to terminate TeslaCrypt process!\r\n"
+				L"Bad things can happens....\r\n");
 		} else {
 			// Delete the found dropper (if needed)
 			if (bAskUser) {
@@ -544,11 +544,11 @@ bool CTeslaDecrypterApp::SearchAndKillTeslaProc(bool bAskUser, bool bKill, bool 
 				bRetVal = DeleteFile(teslaProcPath);
 				if (bRetVal) {
 					wprintf(L"TeslaCrypt dropper successfully deleted!\r\n");
-					g_pLog->WriteLine(L"Search for and terminate TeslaCrypt process - Successfully deleted TeslaCrypt dropper \"%s\".",
+					g_pLog->WriteLine(L"SearchAndKillTeslaProc - Successfully deleted \"%s\" TeslaCrypt dropper.",
 						teslaProcPath);
 				} else {
 					wprintf(L"Unable to delete TeslaCrypt dropper.\r\n");
-					g_pLog->WriteLine(L"Search for and terminate TeslaCrypt process - Unable to delete file \"%s\". Error: %i.",
+					g_pLog->WriteLine(L"SearchAndKillTeslaProc - Unable to delete \"%s\" file. Returned error: %i.",
 						teslaProcPath, (LPVOID)GetLastError());
 				}
 			}
@@ -652,9 +652,6 @@ LPTSTR CTeslaDecrypterApp::ComposeDestFileName(LPTSTR strOrgFile) {
 #pragma region Console Support Functions
 // Create console screen buffer and set it to application
 bool CTeslaDecrypterApp::SetConsoleBuffers() {
-	HANDLE hNewScreenBuffer = FALSE;
-	BOOL retVal = FALSE;
-
 	FILE * fOut = NULL, *fIn = NULL, *fErr = NULL;
 	freopen_s(&fOut, "CON", "w", stdout ) ;
 	freopen_s(&fIn, "CON", "r", stdin ) ;
@@ -681,3 +678,4 @@ bool CTeslaDecrypterApp::CreateAndAttachConsole() {
 	return (bConsoleOk != FALSE);
 }
 #pragma endregion
+

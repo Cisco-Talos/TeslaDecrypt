@@ -20,6 +20,7 @@
  *	Filename: stdafx.h
  *	Standard useful functions implementations
  *	Last revision: 04/17/2015
+ *	Developer: Andrea Allievi - aallievi@cisco.com
  *
  */
 
