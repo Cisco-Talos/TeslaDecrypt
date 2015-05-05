@@ -1,0 +1,28 @@
+TeslaDecrypter 0.1
+Andrea Allievi
+TALOS Group, Cisco Systems Inc
+Last revision: 04/25/2015
+
+VERSION HISTORY
+04/13/2015 - First release, everything
+04/17/2015 - Added the Anti-TeslaCrypt dropper code and resolved a bug with the "FileExists" routine
+04/20/2015 - Fixed some bugs that Xabier has signalled
+04/28/2015 - Fixed a bug in the filename parsing routine (white-spaces bug)
+	     Removed some wrong log messages
+
+
+COMMAND LINE USAGE
+/help - Show this help message
+/key - Manual specify the master key for the decryption (32 bytes/64 digits)
+/keyfile - Specify the "key.dat" file used to recover the master key.
+/file - Decrypt an encrypted file
+/dir - Decrypt all the ".ecc" files in the target directory and its subdirs
+/scanEntirePc - Decrypt the entire workstation ".ecc" files
+/KeepOriginal - Keep the original file(s) in the encryption process
+/deleteTeslaCrypt - Automatically kill and delete the TeslaCrypt dropper (if found active)
+
+
+IMPORTANT
+To correctly compile and run this code you should download and unpack the Precompiled "openssl" libary,
+available here: http://www.npcglib.org/~stathis/blog/precompiled-openssl     
+inside a folder called "openssl" under the root folder of the project.
