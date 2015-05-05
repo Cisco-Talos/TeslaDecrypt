@@ -58,7 +58,7 @@ CTeslaDecrypter::~CTeslaDecrypter(void)
 
 // Read the "key.dat" file and obtain the Master Key
 bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped) {
-	BOOLEAN bRetVal = FALSE;
+	BOOL bRetVal = FALSE;
 	HANDLE hFile = NULL;
 	DWORD dwLastErr = 0;			// Last Win32 error
 	DWORD dwFileSize = 0;			// Key file size
@@ -89,6 +89,9 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 		// Last TeslaCrypt dropper (04/20/2015) ... the time is coming ...
 		yearOffset = 0x18A;
 		masterKeyOffset = 0x1DB;
+	} else if (dwFileSize < 0x1A0) {		// 0x1A0 is the aliogned (masterKeyOffset + sizeof(SHA256))
+		// Wrong file size, exit...
+		return false;
 	}
 
 	// Allocate the memory for the file content
@@ -123,7 +126,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 		if (pbMasterKeyStripped) *pbMasterKeyStripped = TRUE;
 		bRetVal = FALSE;
 	} else
-		bRetVal = 1;
+		bRetVal = TRUE;
 
 	if (bRetVal) {
 		// Copy the output SHA256 and the key
@@ -160,7 +163,7 @@ bool CTeslaDecrypter::SetMasterKey(BYTE key[32]) {
 	} else 
 		g_pLog->WriteLine(L"SetMasterKey - Error! Unable to calculate the SHA256 of the master key!");
 
-	return (bRetVal != 0);
+	return bRetVal;
 }
 
 
@@ -205,6 +208,12 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 
 	// Allocate the memory and read the entire file
 	lpFileBuff = (LPBYTE)VirtualAlloc(NULL, dwFileSize, MEM_COMMIT, PAGE_READWRITE);
+	if (!lpFileBuff) {			// I am too lazy ... :-( ... but check the returned buffer 
+		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to open \"%s\" encrypted file for reading. The system has not enough free resources.", orgFile);
+		CloseHandle(hOrgFile);
+		return false;
+	}
+
 	bRetVal = ReadFile(hOrgFile, lpFileBuff, dwFileSize - sizeof(fileHdr), &dwNumBytesIo, NULL);
 	dwLastErr = GetLastError();
 	CloseHandle(hOrgFile);			// Close original file handle
@@ -263,8 +272,7 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 
 // Decrypt an entire directory, looking for a specific pattern
 bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRecursive, bool bStripExt, bool bIsRecursiveCall) {
-	HANDLE hSearch = NULL,					// Handle to the file search
-		hDirSearch = NULL;					// Handle to the subdirectory search
+	HANDLE hSearch = NULL;					// Handle to the file search
 	BOOL bRetVal = FALSE;					// Win32 returned value
 	bool bSomeErrors = false,				// True if I have encountered some errors
 		bAtLeastOneDecrypted = false;		// True if I have decrypted almost one file
@@ -391,7 +399,7 @@ bool CTeslaDecrypter::DecryptAllPcFiles(LPTSTR pattern) {
 
 		TCHAR drvName[10] = {0};
 		wcscpy_s(drvName, COUNTOF(drvName), L"A:\\"); 
-		drvName[0] = L'A' + i;
+		drvName[0] = L'A' + (TCHAR)i;
 
 		UINT drvType = GetDriveType(drvName);
 		if (drvType == DRIVE_FIXED || drvType == DRIVE_REMOTE || 
@@ -420,9 +428,7 @@ bool CTeslaDecrypter::DecryptAllPcFiles(LPTSTR pattern) {
 		}
 		// Go to next drive
 	}
-	if (bAtLeastOneDriveOk) return true;
-	if (!bSomeErrors) return true;
-	return false;
+	return (bAtLeastOneDriveOk || !bSomeErrors);
 }
 
 #pragma region AES-SHA256 functions
@@ -513,7 +519,6 @@ LPTSTR CTeslaDecrypter::BytesToHex(LPBYTE buff, DWORD buffSize, TCHAR delimChr) 
 
 // Transform a printable hex bytes in a real byte stream
 LPBYTE CTeslaDecrypter::HexToBytes(LPTSTR hexString, DWORD strSize) {
-	//const LPTSTR hexMap = L"0123456789ABCDEF";		// Hex map
 	LPBYTE hexBuff = NULL;				// Hex buffer
 	BYTE curByte = 0;					// Current processing byte
 	DWORD dwCounter = 0;				// Counter for the Hex buffer
@@ -548,3 +553,8 @@ LPBYTE CTeslaDecrypter::HexToBytes(LPTSTR hexString, DWORD strSize) {
 }
 
 #pragma endregion
+
+
+// .... and then.. What else? ....
+// An italian Lucano maybe??? Ahahahah :-)
+//
