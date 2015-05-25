@@ -122,7 +122,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	BYTE zeroedBuff[16] = {0};
 	if (memcmp(masterKey, zeroedBuff, sizeof(DWORD)) == 0) {
 		g_pLog->WriteLine(L"ReadKeyFile - Warning! The master key inside the \"%s\" file is stripped down. "
-			                                                L"Unable to import the master key.", fileName);
+			                L"Unable to import the master key.", fileName);
 		if (pbMasterKeyStripped) *pbMasterKeyStripped = TRUE;
 		bRetVal = FALSE;
 	} else
@@ -333,11 +333,11 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 			if (!g_bKeepOriginalFiles) {
 				bRetVal = DeleteFile(fileFullPath);
 				if (bRetVal)
-					g_pLog->WriteLine(L"DecryptDirectory - Original encrypted file (\"%s\") deleted.",
-						                                                                fileFullPath);
+					g_pLog->WriteLine(L"DecryptDirectory - Original encrypted file (\"%s\") "
+                                                                    L"deleted.",fileFullPath);
 			} else
 				g_pLog->WriteLine(L"DecryptDirectory - A backup of the original encrypted file "
-                                                            L"was stored in \"%s\".", fileFullPath);
+                                                    L"was stored in \"%s\".", fileFullPath);
 			delete lpDestFileName;
 			lpDestFileName = NULL;
 		}
@@ -417,8 +417,8 @@ bool CTeslaDecrypter::DecryptAllPcFiles(LPTSTR pattern) {
 					fsFlags = 0,					// File system flags	
 					maxPathLen = 0;					// Maximum sizes of the FS paths
 
-				bRetVal = GetVolumeInformation(drvName, volumeName, COUNTOF(volumeName), &volSn, &maxPathLen,
-					                                                        &fsFlags, fsName, COUNTOF(fsName));
+				bRetVal = GetVolumeInformation(drvName, volumeName, COUNTOF(volumeName), &volSn, 
+                                        &maxPathLen, &fsFlags, fsName, COUNTOF(fsName));
 
 				if (bRetVal) {
 					// Do the decryption of this volume
