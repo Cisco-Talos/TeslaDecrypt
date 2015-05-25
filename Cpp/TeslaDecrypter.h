@@ -53,7 +53,8 @@ public:
 	bool DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile = NULL);
 
 	// Decrypt an entire directory, looking for a specific pattern
-	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc", bool bRecursive = true, bool bStripExt = true, bool bIsRecursiveCall = false);
+	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc", bool bRecursive = true, 
+                                          bool bStripExt = true, bool bIsRecursiveCall = false);
 
 	// Decrypt the entire Workstation
 	bool DecryptAllPcFiles(LPTSTR pattern = L"*.ecc");
@@ -69,7 +70,8 @@ private:
 	bool GetSha256(LPBYTE lpBuff, DWORD dwSize, BYTE sha256[32]);
 
 	// Decrypt / encrypt with and AES CBC 256 algorithm
-	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
+	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, 
+                                         LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
 
 private:
 	// The shifted Master key (32 bytes)

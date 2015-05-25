@@ -70,7 +70,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	BYTE sha256[32] = {0};
 
 	hFile = CreateFile(fileName, FILE_GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 
-		FILE_ATTRIBUTE_NORMAL, NULL);
+	        	                                    FILE_ATTRIBUTE_NORMAL, NULL);
 	dwLastErr = GetLastError();
 
 	if (hFile == INVALID_HANDLE_VALUE) 
@@ -89,7 +89,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 		// Last TeslaCrypt dropper (04/20/2015) ... the time is coming ...
 		yearOffset = 0x18A;
 		masterKeyOffset = 0x1DB;
-	} else if (dwFileSize < 0x1A0) {		// 0x1A0 is the aliogned (masterKeyOffset + sizeof(SHA256))
+	} else if (dwFileSize < 0x1A0) {	// 0x1A0 is the aligned (masterKeyOffset + sizeof(SHA256))
 		// Wrong file size, exit...
 		return false;
 	}
@@ -122,7 +122,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	BYTE zeroedBuff[16] = {0};
 	if (memcmp(masterKey, zeroedBuff, sizeof(DWORD)) == 0) {
 		g_pLog->WriteLine(L"ReadKeyFile - Warning! The master key inside the \"%s\" file is stripped down. "
-			L"Unable to import the master key.", fileName);
+			                                                L"Unable to import the master key.", fileName);
 		if (pbMasterKeyStripped) *pbMasterKeyStripped = TRUE;
 		bRetVal = FALSE;
 	} else
@@ -151,7 +151,7 @@ bool CTeslaDecrypter::SetMasterKey(BYTE key[32]) {
 	bool bRetVal = false;
 
 	// Calculate the SHA256 of the key
-	bRetVal = GetSha256(key, 32, sha256);			// BANG! Don't use COUNTOF(key) when an array is passed as argument
+	bRetVal = GetSha256(key, 32, sha256);	// BANG! Don't use COUNTOF(key) when an array is passed as argument
 	if (bRetVal) {
 		// Copy the output SHA256 and the key
 		RtlCopyMemory(g_sha256mKey, sha256, sizeof(g_sha256mKey));
@@ -189,7 +189,8 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	dwLastErr = GetLastError();
 
 	if (hOrgFile == INVALID_HANDLE_VALUE) {
-		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to open \"%s\" encrypted file for reading. Last Win32 error: %i.", orgFile, (LPVOID)dwLastErr);
+		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to open \"%s\" encrypted file for reading. "
+                                            L"Last Win32 error: %i.", orgFile, (LPVOID)dwLastErr);
 		return false;
 	}
 
@@ -201,7 +202,9 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	// Verify the header
 	dwOrgFileSize = *((LPDWORD)(fileHdr+0x10));
 	if (!bRetVal || dwOrgFileSize > dwFileSize) {
-		g_pLog->WriteLine(L"DecryptTeslaFile - The \"%s\" encrypted file format is invalid. Maybe it is already decrypted or it's not a TeslaCrypt encrypted file. (last Win32 error: %i).", orgFile, (LPVOID)dwLastErr);
+		g_pLog->WriteLine(L"DecryptTeslaFile - The \"%s\" encrypted file format is invalid. "
+                            L"Maybe it is already decrypted or it's not a TeslaCrypt encrypted file. "
+                                            L"(last Win32 error: %i).", orgFile, (LPVOID)dwLastErr);
 		CloseHandle(hOrgFile);
 		return false;
 	}
@@ -209,7 +212,8 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	// Allocate the memory and read the entire file
 	lpFileBuff = (LPBYTE)VirtualAlloc(NULL, dwFileSize, MEM_COMMIT, PAGE_READWRITE);
 	if (!lpFileBuff) {			// I am too lazy ... :-( ... but check the returned buffer 
-		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to open \"%s\" encrypted file for reading. The system has not enough free resources.", orgFile);
+		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to open \"%s\" encrypted file for reading. "
+                                            L"The system has not enough free resources.", orgFile);
 		CloseHandle(hOrgFile);
 		return false;
 	}
@@ -219,7 +223,8 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	CloseHandle(hOrgFile);			// Close original file handle
 
 	if (!bRetVal) {
-		g_pLog->WriteLine(L"DecryptTeslaFile - Error, unable to read from \"%s\" file. Returned error: %i.", orgFile, (LPVOID)dwLastErr);
+		g_pLog->WriteLine(L"DecryptTeslaFile - Error, unable to read from \"%s\" file. "
+                                                L"Returned error: %i.", orgFile, (LPVOID)dwLastErr);
 		if (lpFileBuff) VirtualFree(lpFileBuff, 0, MEM_RELEASE);
 		return false;
 	}
@@ -265,7 +270,8 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 		g_pLog->WriteLine(L"DecryptTeslaFile - Successfully decrypted \"%s\" file.", destFile);
 		return true;
 	} else {		
-		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to write the decrypted file (\"%s\"). Returned error: %i.", destFile, (LPVOID)dwLastErr);
+		g_pLog->WriteLine(L"DecryptTeslaFile - Unable to write the decrypted file (\"%s\"). "
+                                            L"Returned error: %i.", destFile, (LPVOID)dwLastErr);
 		return false;
 	}
 }
@@ -275,7 +281,7 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 	HANDLE hSearch = NULL;					// Handle to the file search
 	BOOL bRetVal = FALSE;					// Win32 returned value
 	bool bSomeErrors = false,				// True if I have encountered some errors
-		bAtLeastOneDecrypted = false;		// True if I have decrypted almost one file
+		 bAtLeastOneDecrypted = false;		// True if I have decrypted almost one file
 	WIN32_FIND_DATA findData = {0};			// Win32 find data
 	TCHAR fullSearchPattern[0x200] = {0};	// FULL search pattern
 	DWORD dwStrLen = 0;						// String size in TCHARs
@@ -285,8 +291,9 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 	if (!FileExists(dirName)) return false;
 
 	if (!bIsRecursiveCall)
-		g_pLog->WriteLine(L"DecryptDirectory - Processing \"%s\"  directory (Recursive: %s, Strip file extensions: %s)...", dirName,
-			(bRecursive ? L"True": L"False"), (bStripExt ? L"True": L"False"));
+		g_pLog->WriteLine(L"DecryptDirectory - Processing \"%s\"  directory (Recursive: %s, "
+                          L"Strip file extensions: %s)...", dirName,
+                			(bRecursive ? L"True": L"False"), (bStripExt ? L"True": L"False"));
 
 	// Create full search path
 	wcscpy_s(fullSearchPattern, COUNTOF(fullSearchPattern), dirName);
@@ -305,8 +312,8 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 
 	while (bRetVal) {
 		// Compose the full file path
-		TCHAR fileFullPath[MAX_PATH] = {0};				// Full original file path
-		LPTSTR lpDestFileName = NULL;					// New file full path (if needed)
+		TCHAR fileFullPath[MAX_PATH] = {0};		// Full original file path
+		LPTSTR lpDestFileName = NULL;			// New file full path (if needed)
 		wcscpy_s(fileFullPath, COUNTOF(fileFullPath), fullSearchPattern);
 		wcscat_s(fileFullPath, COUNTOF(fileFullPath), findData.cFileName);
 
@@ -327,10 +334,10 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 				bRetVal = DeleteFile(fileFullPath);
 				if (bRetVal)
 					g_pLog->WriteLine(L"DecryptDirectory - Original encrypted file (\"%s\") deleted.",
-						fileFullPath);
+						                                                                fileFullPath);
 			} else
 				g_pLog->WriteLine(L"DecryptDirectory - A backup of the original encrypted file "
-					L"was stored in \"%s\".", fileFullPath);
+                                                            L"was stored in \"%s\".", fileFullPath);
 			delete lpDestFileName;
 			lpDestFileName = NULL;
 		}
@@ -380,7 +387,7 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 
 	if (bAtLeastOneDecrypted) return true;
 	if (!bSomeErrors) {
-		//g_pLog->WriteLine(L"DecryptDirectory - Nothing to decrypt here (\"%s\").", dirName);
+		// g_pLog->WriteLine(L"DecryptDirectory - Nothing to decrypt here (\"%s\").", dirName);
 		return true;
 	}
 	return false;
@@ -389,7 +396,7 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 // Decrypt the entire Workstation
 bool CTeslaDecrypter::DecryptAllPcFiles(LPTSTR pattern) {
 	bool bAtLeastOneDriveOk = false,
-		bSomeErrors = false;
+		 bSomeErrors = false;
 	BOOL bRetVal = FALSE;
 
 	DWORD drivesMask = GetLogicalDrives();
@@ -411,7 +418,7 @@ bool CTeslaDecrypter::DecryptAllPcFiles(LPTSTR pattern) {
 					maxPathLen = 0;					// Maximum sizes of the FS paths
 
 				bRetVal = GetVolumeInformation(drvName, volumeName, COUNTOF(volumeName), &volSn, &maxPathLen,
-					&fsFlags, fsName, COUNTOF(fsName));
+					                                                        &fsFlags, fsName, COUNTOF(fsName));
 
 				if (bRetVal) {
 					// Do the decryption of this volume
