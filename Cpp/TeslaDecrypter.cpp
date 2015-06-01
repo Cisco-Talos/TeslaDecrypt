@@ -36,7 +36,9 @@ CTeslaDecrypter::CTeslaDecrypter(CLog * pLog):
 	g_bKeySet(false),
 	g_bIsMyLog(false),
 	g_bKeepOriginalFiles(false),
-	g_bCleanupTeslaFiles(false)
+	g_bCleanupTeslaFiles(false),
+	g_bForceKey(false),
+	g_pAlphaDecoder(NULL)
 {
 	RtlZeroMemory(g_masterKey, sizeof(g_masterKey));
 	RtlZeroMemory(g_sha256mKey, sizeof(g_sha256mKey));           
@@ -45,6 +47,9 @@ CTeslaDecrypter::CTeslaDecrypter(CLog * pLog):
 		// Initialize an empty log 
 		g_pLog = new CLog();
 		g_bIsMyLog = true;
+	} else {
+		g_pLog = pLog;
+		g_bIsMyLog = false;
 	}
 }
 
@@ -54,6 +59,7 @@ CTeslaDecrypter::~CTeslaDecrypter(void)
 		g_pLog->Close();
 		delete g_pLog;
 	}
+	if (g_pAlphaDecoder) delete g_pAlphaDecoder;
 }
 
 // Read the "key.dat" file and obtain the Master Key
@@ -65,9 +71,12 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	DWORD dwBytesIo = 0;			// Number of bytes read
 	DWORD masterKeyOffset = 0x177;	// Master key Offset in the key.dat file
 	DWORD yearOffset = 0x126;		// Year WORD offset in the key.dat file
+	//DWORD paymentKeyOffset = 0x64;	// Payment key offset in the "storage.bin" file (we don't care about this)
+	DWORD recKeyOffset = 0x00;		// Recovery key offset in the key file
+	BYTE keyFileVersion = 0;		// The "key.dat" detected file version 
 	LPBYTE lpBuff = NULL;
 	BYTE masterKey[32] = {0};
-	BYTE sha256[32] = {0};
+	CHAR recKeyHex[0x82] = {0};	// The recovery key in hex
 
 	hFile = CreateFile(fileName, FILE_GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 
 	        	                                    FILE_ATTRIBUTE_NORMAL, NULL);
@@ -81,6 +90,8 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 		return false;
 	}
 
+<<<<<<< HEAD
+=======
 	// Compile the offset based on the "key.dat" file size:
 	if (dwFileSize == 0x290) {
 		yearOffset = 0x126;
@@ -94,6 +105,7 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 		return false;
 	}
 
+>>>>>>> origin/master
 	// Allocate the memory for the file content
 	lpBuff = (LPBYTE)new BYTE[dwFileSize];
 	RtlZeroMemory(lpBuff, dwFileSize);
@@ -102,24 +114,78 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	bRetVal = ReadFile(hFile, lpBuff, dwFileSize, &dwBytesIo, NULL);
 	CloseHandle(hFile);			// We don't need it anymore
 
+	// Compile the offset based on the "key.dat" file size and content:
+	if (!bRetVal || dwFileSize < 0x1A0) {			// 0x1A0 is the aligned (masterKeyOffset + sizeof(SHA256))
+		// Wrong file size, exit...
+		if (lpBuff) delete lpBuff;
+		return false;
+	} 
+	else if (dwFileSize <= 0x280) {
+		// First version of TeslaCrypt - the master key should be always located inside this key file
+		yearOffset = 0x126;
+		masterKeyOffset = 0x177;
+		recKeyOffset = 0;
+		keyFileVersion = 1;
+	}
+	else if (dwFileSize == 0x290) {
+		// Second version of TeslaCrypt - the master key could be stripped
+		yearOffset = 0x126;
+		masterKeyOffset = 0x177;
+		recKeyOffset = 0x84;
+		keyFileVersion = 2;
+	} 
+	else if (dwFileSize >= 0x2F0) {
+		// Third version of TeslaCrypt - All version of AlphaCrypt
+		yearOffset = 0x18A;
+		masterKeyOffset = 0x1DB;
+		recKeyOffset = 0x84;
+
+		// To get if this is TeslaCrypt version 3 or AlphaCrypt EXX variant analyse offset +0x1C0
+		// Latest version of AlphaCrypt indeed fill the offset +0x148 and +0x19A with random OS data
+		DWORD dwToCheck = *((DWORD*)(lpBuff+ 0x1C0));
+		if (dwToCheck != 0) {
+			// Latest version of Alphacrypt 
+			keyFileVersion = 5;
+			masterKeyOffset = 0x1B1;
+		} else
+			// Third and last version of TeslaCrypt OR first version of AlphaCrypt
+			keyFileVersion = 4;
+	} 
+
 	// Verify its content
 	SYSTEMTIME * pKeyTime = (PSYSTEMTIME)&lpBuff[yearOffset];
-	if (pKeyTime->wYear < 2014 || pKeyTime->wYear > 2016) {
+	if (pKeyTime->wYear < 2014 || pKeyTime->wYear > 2020) {
 		g_pLog->WriteLine(L"ReadKeyFile - Invalid key file format (\"%s\" file).", fileName);
 		if (lpBuff) delete lpBuff;
 		return false;
 	}
+	
+	if (keyFileVersion <= 3) 
+		g_pLog->WriteLine(L"ReadKeyFile - Detected a TeslaCrypt version %i key file", (LPVOID)keyFileVersion);
+	else
+		g_pLog->WriteLine(L"ReadKeyFile - Detected an AlphaCrypt version %i key file", (LPVOID)(keyFileVersion - 3));
+
 
 	// Get the master key
 	RtlCopyMemory(masterKey, lpBuff + masterKeyOffset, 32);
+	// Grab the recovery key (if any)
+	if (recKeyOffset) {
+		bool bIsHex = false;
+		LPBYTE lpRecKeyPtr = lpBuff + recKeyOffset;
+		
+		bIsHex = CAlphaCrypt::IsBuffAnHexString(lpRecKeyPtr, 0x80);
+		
+		if (!bIsHex) {
+			// Need to convert from binary
+			lpRecKeyPtr = (LPBYTE)CAlphaCrypt::bin2hex(lpRecKeyPtr, 0x40);
+			RtlCopyMemory(recKeyHex, lpRecKeyPtr, 0x80);
+			delete lpRecKeyPtr;
+		} else
+			RtlCopyMemory(recKeyHex, lpRecKeyPtr, 0x80);
+	}
 
-	// Calculate the SHA256 of the key
-	bRetVal = GetSha256(masterKey, sizeof(masterKey), sha256);
-	if (!bRetVal)
-		g_pLog->WriteLine(L"ReadKeyFile - Error! Unable to calculate the SHA256 of the master key!");
-
-	// Analyse it and get if it is empty
-	BYTE zeroedBuff[16] = {0};
+	// Analyse the master key and get if it is empty
+	BYTE zeroedBuff[32] = {0};
 	if (memcmp(masterKey, zeroedBuff, sizeof(DWORD)) == 0) {
 		g_pLog->WriteLine(L"ReadKeyFile - Warning! The master key inside the \"%s\" file is stripped down. "
 			                L"Unable to import the master key.", fileName);
@@ -128,21 +194,55 @@ bool CTeslaDecrypter::ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped
 	} else
 		bRetVal = TRUE;
 
-	if (bRetVal) {
-		// Copy the output SHA256 and the key
-		RtlCopyMemory(g_sha256mKey, sha256, sizeof(g_sha256mKey));
-		RtlCopyMemory(g_masterKey, masterKey, sizeof(g_masterKey));
-		LPTSTR hexKey = BytesToHex(g_masterKey, sizeof(g_masterKey), NULL);
-		g_pLog->WriteLine(L"Successfully imported the master key \"%s\" from \"%s\" file.", hexKey, fileName);
-		if (pbMasterKeyStripped) *pbMasterKeyStripped = FALSE;
-		delete hexKey;
-		g_bKeySet = true;
-	} 	
+	// Calculate the inverse of the master key (if needed)
+	if (keyFileVersion >= 5) {
+		g_pLog->WriteLine(L"ReadKeyFile - Detected an AlphaCrypt v2 master key, I need to normalize it...");
+		bRetVal = CAlphaCrypt::GetTheInverse(masterKey, masterKey);
+		if (!bRetVal) {
+			g_pLog->WriteLine(L"ReadKeyFile - The calculation of the inverse key has failed. Unable to continue.");
+			if (lpBuff) delete lpBuff;
+			return false;
+		}
+	}
+
+	// Verify here the master key
+	if (keyFileVersion >= 2) {
+		if (!g_pAlphaDecoder) g_pAlphaDecoder = new CAlphaCrypt(g_pLog);
+		bRetVal = g_pAlphaDecoder->VerifyAlphaMasterKey(masterKey, recKeyHex);
+		if (!bRetVal) {
+			g_pLog->WriteLine(L"ReadKeyFile - The master key inside \"%s\" file can't be verified. "
+				L"This could lead to strange results.", fileName);
+			
+			if (!g_bForceKey) {
+				if (pbMasterKeyStripped) *pbMasterKeyStripped = TRUE;
+				if (lpBuff) delete lpBuff;
+				return false;
+			} else {
+				cl_wprintf(YELLOW, L"Warning! ");
+				wprintf(L"The master key has not been verified. Strange results could happen!\r\n");
+			}
+		}
+	}
+
+	bRetVal = SetMasterKey(masterKey);
+	if (bRetVal && pbMasterKeyStripped) *pbMasterKeyStripped = FALSE;
 	
 	//Cleanup here
 	if (lpBuff) delete lpBuff;
 
 	return (bRetVal != FALSE);
+}
+
+// Get master key (if it has been set)
+bool CTeslaDecrypter::IsMasterKeySet(LPBYTE * lppKey, DWORD * lpdwKeySize) {
+	if (!g_bKeySet) return false;
+	if (lppKey) {
+		LPBYTE buff = new BYTE[sizeof(g_masterKey)];
+		RtlCopyMemory(buff, g_masterKey, sizeof(g_masterKey));
+		*lppKey = buff;
+		if (lpdwKeySize) *lpdwKeySize = sizeof(g_masterKey);
+	}
+	return true;
 }
 
 // Manually set the master key
@@ -176,7 +276,10 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	DWORD dwFileSize = 0,					// Encrypted file size
 		  dwOrgFileSize = 0,				// Original file size
 		  dwLastErr = 0;					// Last Win32 Error
-	BYTE fileHdr[0x14] = {0};				// TeslaCrypt file header
+	BYTE fileHdr[0x100] = {0};				// Tesla/AlphaCrypt file header
+	DWORD dwHdrSize = 0;					// The encrypted file header size
+	DWORD dwIvOffset = NULL,				// AES IV initialization vector offset
+		dwIvSize = 0x10;					// AES IV size
 	LPBYTE lpFileBuff = NULL,				// Entire file buffer
 		lpDecBuff = NULL;					// The decrypted file buffer
 
@@ -199,8 +302,24 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	dwLastErr = GetLastError();
 	dwFileSize = GetFileSize(hOrgFile, NULL);
 
+	// Check the header
+	// AlphaCrypt v2 file header:
+	//	+ 0x00 - Payment key in HEX (0x40 bytes)
+	//	+ 0x40 - NULL Dword (0x4 bytes)
+	//	+ 0x44 - Recovery key in HEX (0x80 bytes)
+	//	+ 0xC4 - NULL Dword (0x4 bytes)
+	if (CAlphaCrypt::IsBuffAnHexString(fileHdr, 0x20))  {
+		// AlphaCrypt v2 encrypted file
+		dwOrgFileSize = *((LPDWORD)(fileHdr + 0xD8));
+		dwIvOffset = 0xC8;
+	} else {
+		// TeslaCrypt standard file
+		dwOrgFileSize = *((LPDWORD)(fileHdr+0x10));
+		dwIvOffset = 0;
+	}
+	dwHdrSize = dwIvOffset + dwIvSize + sizeof(DWORD);
+
 	// Verify the header
-	dwOrgFileSize = *((LPDWORD)(fileHdr+0x10));
 	if (!bRetVal || dwOrgFileSize > dwFileSize) {
 		g_pLog->WriteLine(L"DecryptTeslaFile - The \"%s\" encrypted file format is invalid. "
                             L"Maybe it is already decrypted or it's not a TeslaCrypt encrypted file. "
@@ -218,7 +337,9 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 		return false;
 	}
 
-	bRetVal = ReadFile(hOrgFile, lpFileBuff, dwFileSize - sizeof(fileHdr), &dwNumBytesIo, NULL);
+	// Move file pointer according to Header size
+	bRetVal = SetFilePointer(hOrgFile, dwHdrSize, NULL, FILE_BEGIN);
+	bRetVal = ReadFile(hOrgFile, lpFileBuff, dwFileSize - dwHdrSize, &dwNumBytesIo, NULL);
 	dwLastErr = GetLastError();
 	CloseHandle(hOrgFile);			// Close original file handle
 
@@ -230,7 +351,7 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 	}
 
 	// Try to perform the decryption now
-	bRetVal = EncDecWithAes256(lpFileBuff, dwFileSize - sizeof(fileHdr), fileHdr, &lpDecBuff, &dwFileSize, false);
+	bRetVal = EncDecWithAes256(lpFileBuff, dwFileSize - dwHdrSize, fileHdr + dwIvOffset, &lpDecBuff, &dwFileSize, false);
 	_ASSERT(dwFileSize >= dwOrgFileSize);
 
 	// Cleanup original buffer
@@ -262,9 +383,16 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
 		VirtualFree(lpDecBuff, 0, MEM_RELEASE);
 	lpDecBuff = NULL;
 
-	if (!g_bKeepOriginalFiles && destFile) 
+	if (destFile) 
 		// If I don't have to keep the original file delete it
-		DeleteFile(orgFile);
+		if (!g_bKeepOriginalFiles) {
+			BOOL dRetVal = DeleteFile(orgFile);
+			if (dRetVal)
+				g_pLog->WriteLine(L"DecryptTeslaFile - Original encrypted file (\"%s\") deleted.", orgFile);
+		} else {
+			g_pLog->WriteLine(L"DecryptTeslaFile - A backup of the original encrypted file "
+			L"was stored in \"%s\".", orgFile);
+		}
 
 	if (hDestFile != INVALID_HANDLE_VALUE && bRetVal) {
 		g_pLog->WriteLine(L"DecryptTeslaFile - Successfully decrypted \"%s\" file.", destFile);
@@ -274,6 +402,66 @@ bool CTeslaDecrypter::DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile) {
                                             L"Returned error: %i.", destFile, (LPVOID)dwLastErr);
 		return false;
 	}
+}
+
+// Check if a filename matches the pattern string
+bool CTeslaDecrypter::CheckFileNameInPattern(LPTSTR fileName, LPTSTR pattern) {
+	LPTSTR fPattern = NULL;				// Formatted pattern string
+	LPTSTR lpExtPtr = NULL;				// File extension pointer
+	LPTSTR lpCurPtr = NULL,				// Current pointer in the pattern string
+		lpEndPtr = NULL;				// End pointer in the pattern string
+	DWORD dwFileNameLen = 0;			// File name string length
+	DWORD dwPatternStrLen = 0;			// Pattern string length
+	bool bExtFound = false;				// True if I have found an extension in the pattern
+
+	if (!fileName) return false;
+	if (!pattern) return true;
+
+	dwPatternStrLen = wcslen(pattern);			// Remember the space for the NULL char
+	fPattern = new TCHAR[dwPatternStrLen+6];
+	RtlZeroMemory(fPattern, (dwPatternStrLen+6) * sizeof(TCHAR));
+	wcscpy_s(fPattern, dwPatternStrLen+1, pattern);
+	if (pattern[dwPatternStrLen-1] != L';') {
+		fPattern[dwPatternStrLen++] = L';';
+		fPattern[dwPatternStrLen] = 0;
+	}
+	
+	// Get the file extension
+	lpExtPtr = wcsrchr(fileName, L'.');
+	if (!lpExtPtr) {
+		delete fPattern;
+		return false;
+	} else
+		lpExtPtr++;
+
+	// Search if the file extension is inside the pattern
+	lpCurPtr = fPattern;
+	while ((lpEndPtr = wcschr(lpCurPtr, L';')) != NULL) {
+		LPTSTR lpDotPtr = NULL;			// The dot pointer
+		lpEndPtr[0] = 0;
+		lpDotPtr = wcschr(lpCurPtr, L'.');
+		if (lpDotPtr) lpDotPtr++;
+		else lpDotPtr = lpCurPtr;
+
+		// Here theoretically I need to implement even the body pattern match
+		// But we don't care in this version of the decryptor
+		// Too lazy man! :-)
+		if (_wcsicmp(lpDotPtr, lpExtPtr) == 0) 
+			bExtFound = true;
+		else if (_wcsicmp(lpDotPtr, L"*") == 0 ||
+			_wcsicmp(lpDotPtr, L"*.*") == 0)
+			// Global search pattern
+			bExtFound = true;
+
+		lpEndPtr[0] = L';';
+		lpCurPtr = lpEndPtr + 1;
+
+		if (bExtFound) break;
+	}
+	
+	// Cleanup
+	delete fPattern;
+	return bExtFound;
 }
 
 // Decrypt an entire directory, looking for a specific pattern
@@ -303,8 +491,9 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 		dwStrLen = wcslen(fullSearchPattern);
 	}
 	// Compose the FULL search path
-	wcscat_s(fullSearchPattern, COUNTOF(fullSearchPattern), pattern);
+	wcscat_s(fullSearchPattern, COUNTOF(fullSearchPattern), L"*.*");
 
+	// Damn heck FindFirstFile API doesn't support multiple pattern
 	hSearch = FindFirstFile(fullSearchPattern, &findData);
 	bRetVal = (hSearch != INVALID_HANDLE_VALUE);
 	// Trim down the original search pattern
@@ -316,10 +505,54 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 		LPTSTR lpDestFileName = NULL;			// New file full path (if needed)
 		wcscpy_s(fileFullPath, COUNTOF(fileFullPath), fullSearchPattern);
 		wcscat_s(fileFullPath, COUNTOF(fileFullPath), findData.cFileName);
+		
+		if (_wcsicmp(findData.cFileName, L"..") == 0 ||
+			_wcsicmp(findData.cFileName, L".") == 0) 
+		{
+			// Wrong filename, go to next file
+			bRetVal = FindNextFile(hSearch, &findData);
+			continue;
+		}
 
-		// Strip the ".ecc" part if it exists
+		if (GetFileAttributes(fileFullPath) & FILE_ATTRIBUTE_DIRECTORY) {
+			// This is a directory
+			if (bRecursive == true) {
+				bRetVal = DecryptDirectory(fileFullPath, pattern, true, bStripExt, true);
+				if (bRetVal) bAtLeastOneDecrypted = true;
+			} else {
+				// Go next
+				bRetVal = FindNextFile(hSearch, &findData);
+				continue;
+			}
+		} 
+
+		// Should I have to cleanup all the TeslaCrypt files?
+		bool bIsGarbageFile = 
+			(_wcsicmp(findData.cFileName, L"HELP_RESTORE_FILES.txt") == 0);
+		bIsGarbageFile |= 
+			(_wcsicmp(findData.cFileName, L"HELP_RESTORE_FILES.bmp") == 0);
+		bIsGarbageFile |= 
+			(_wcsnicmp(findData.cFileName,L"HELP_RESTORE_FILES_", 19) == 0);
+			
+		if (g_bCleanupTeslaFiles && bIsGarbageFile) {
+			bRetVal = DeleteFile(fileFullPath);
+			if (bRetVal)
+				g_pLog->WriteLine(L"DecryptDirectory - TeslaCrypt garbage file (\"%s\") deleted.", fileFullPath);
+			// Continue the cycle.... uuuhm ... Maybe it's going to continue in the next block???
+			bRetVal = FindNextFile(hSearch, &findData);
+			continue;
+		}
+
+		// Check here if the file name has 
+		if (!CheckFileNameInPattern(fileFullPath, pattern)) {
+			// This file doesn't match, go next
+			bRetVal = FindNextFile(hSearch, &findData);
+			continue;
+		}
+
+		// Strip the ".ecc" (".ezz", ".exx" or whatever) part if it exists
 		LPTSTR extPtr = wcsrchr(fileFullPath, L'.');
-		if (_wcsicmp(extPtr, L".ecc") == 0 && bStripExt) {
+		if (bStripExt) {
 			lpDestFileName = new TCHAR[MAX_PATH];
 			wcsncpy_s(lpDestFileName, MAX_PATH, fileFullPath, extPtr - fileFullPath);
 		}
@@ -328,8 +561,10 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 		if (!bRetVal) bSomeErrors = true;
 		else bAtLeastOneDecrypted = true;
 
-		// Delete the new file name buffer and the original one (if needed)
+		// Delete the new file name buffer 
 		if (lpDestFileName) {
+<<<<<<< HEAD
+=======
 			if (!g_bKeepOriginalFiles) {
 				bRetVal = DeleteFile(fileFullPath);
 				if (bRetVal)
@@ -338,6 +573,7 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 			} else
 				g_pLog->WriteLine(L"DecryptDirectory - A backup of the original encrypted file "
                                                     L"was stored in \"%s\".", fileFullPath);
+>>>>>>> origin/master
 			delete lpDestFileName;
 			lpDestFileName = NULL;
 		}
@@ -346,44 +582,6 @@ bool CTeslaDecrypter::DecryptDirectory(LPTSTR dirName, LPTSTR pattern, bool bRec
 		bRetVal = FindNextFile(hSearch, &findData);
 	}
 	FindClose(hSearch);
-
-	// Now if I am in the recursive modality, examine all the directories
-	if (bRecursive) {
-		wcscat_s(fullSearchPattern, COUNTOF(fullSearchPattern), L"*.*");
-		hSearch = FindFirstFile(fullSearchPattern, &findData);
-		bRetVal = (hSearch != INVALID_HANDLE_VALUE);
-
-		while (bRetVal) {
-			if (_wcsicmp(findData.cFileName, L"..") == 0 ||
-				_wcsicmp(findData.cFileName, L".") == 0) {
-				// Skip this
-				bRetVal = FindNextFile(hSearch, &findData);
-				continue;
-			}
-			fullSearchPattern[dwStrLen] = 0;
-			wcscat_s(fullSearchPattern, COUNTOF(fullSearchPattern), findData.cFileName);
-			if (GetFileAttributes(fullSearchPattern) & FILE_ATTRIBUTE_DIRECTORY) {
-				bRetVal = DecryptDirectory(fullSearchPattern, pattern, true, bStripExt, true);
-				if (bRetVal) bAtLeastOneDecrypted = true;
-			} else {
-				// Should I have to cleanup all the TeslaCrypt files?
-				bool bIsGarbageFile = 
-					(_wcsicmp(findData.cFileName, L"HELP_RESTORE_FILES.txt") == 0);
-				bIsGarbageFile |= 
-					(_wcsicmp(findData.cFileName, L"HELP_RESTORE_FILES.bmp") == 0);
-					
-				if (g_bCleanupTeslaFiles && bIsGarbageFile) {
-					bRetVal = DeleteFile(fullSearchPattern);
-					if (bRetVal)
-						g_pLog->WriteLine(L"DecryptDirectory - TeslaCrypt garbage file (\"%s\") deleted.", fullSearchPattern);
-				}
-
-			}
-
-			// Go to next file
-			bRetVal = FindNextFile(hSearch, &findData);
-		}
-	}
 
 	if (bAtLeastOneDecrypted) return true;
 	if (!bSomeErrors) {

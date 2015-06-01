@@ -41,13 +41,13 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\openssl\include"
+				AdditionalIncludeDirectories="$(openssldir)\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="2"
-				WarningLevel="3"
+				WarningLevel="4"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -61,9 +61,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32MTd.lib"
+				AdditionalDependencies="libeay32MTd.lib ssleay32MTd.lib"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="..\openssl\lib"
+				AdditionalLibraryDirectories="$(openssldir)\lib"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				TargetMachine="1"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\openssl\include"
+				AdditionalIncludeDirectories="$(openssldir)\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS"
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
@@ -136,9 +136,10 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32MT.lib"
+				AdditionalDependencies="libeay32MT.lib ssleay32MT.lib"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="..\openssl\lib"
+				AdditionalLibraryDirectories="$(openssldir)\lib"
+				UACExecutionLevel="2"
 				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -176,6 +177,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\AlphaCrypt.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\entrypoint.cpp"
 				>
@@ -218,6 +223,10 @@
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\AlphaCrypt.h"
+				>
+			</File>
 			<File
 				RelativePath=".\Log.h"
 				>

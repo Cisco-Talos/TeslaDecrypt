@@ -1,4 +1,4 @@
-TeslaDecrypter 0.1
+﻿TeslaDecrypter 0.1
 Andrea Allievi
 TALOS Group, Cisco Systems Inc
 Last revision: 04/25/2015
@@ -8,13 +8,16 @@ VERSION HISTORY
 04/17/2015 - Added the Anti-TeslaCrypt dropper code and resolved a bug with the "FileExists" routine
 04/20/2015 - Fixed some bugs that Xabier has signalled
 04/28/2015 - Fixed a bug in the filename parsing routine (white-spaces bug)
-	     Removed some wrong log messages
+		     Removed some wrong log messages
+05/29/2015 - Added support for 2 versions of TeslaCrypt dropper and 2 versions of AlphaCrypt
+			 Added "/forcekey" command line switch
 
 
 COMMAND LINE USAGE
 /help - Show this help message
 /key - Manual specify the master key for the decryption (32 bytes/64 digits)
 /keyfile - Specify the "key.dat" file used to recover the master key.
+/forcekey - Force the master key to be accepted even in the case that the verification goes wrong
 /file - Decrypt an encrypted file
 /dir - Decrypt all the ".ecc" files in the target directory and its subdirs
 /scanEntirePc - Decrypt the entire workstation ".ecc" files
