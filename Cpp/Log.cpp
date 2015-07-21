@@ -221,8 +221,8 @@ void CLog::Write(LPWSTR dbgStr) {
 	DWORD bytesWritten = 0;
 	CHAR * logStr = NULL;			// String to write in file
 
-	if (!g_hLogFile || g_hLogFile == INVALID_HANDLE_VALUE) {	// If I don't have opened a log file
-		OutputDebugString(dbgStr);				// write to debug output
+	if (!g_hLogFile || g_hLogFile == INVALID_HANDLE_VALUE) {		// If I don't have opened a log file
+		OutputDebugString(dbgStr);									// write to debug output
 	} else {
 		bytesToWrite = (DWORD)wcslen(dbgStr) + 1;
 		logStr = new CHAR[bytesToWrite];
@@ -367,7 +367,7 @@ LPTSTR CVersionInfo::GetCompanyName() {
 
 // Helper function that receive versione information of a specific module (NULL = this executable)
 bool CVersionInfo::GetModuleVersionInfo(HMODULE hMod) {
-	LPTSTR modFileName = NULL;		// Filename of module used to retrieve version information
+	LPTSTR modFileName = NULL;				// Filename of module used to retrieve version information
 	BOOL retVal = FALSE;
 
 	modFileName = new TCHAR[MAX_PATH];
@@ -383,11 +383,11 @@ bool CVersionInfo::GetModuleVersionInfo(HMODULE hMod) {
 }
 
 bool CVersionInfo::GetModuleVersionInfo(LPTSTR modName = NULL) {
-	DWORD dummy = 0;			// Dummy DWORD variable for GetFileVersionInfoSize
-	DWORD verSize = 0;			// Version info size
-	LPBYTE buff = NULL;			// Buffer
+	DWORD dummy = 0;						// Dummy DWORD variable for GetFileVersionInfoSize
+	DWORD verSize = 0;						// Version info size
+	LPBYTE buff = NULL;						// Buffer
 	BOOL retVal = FALSE;
-	LPTSTR langStr = NULL;			// Lang and code page Version string
+	LPTSTR langStr = NULL;					// Lang and code page Version string
 	if (!modName) return false;
 
 	verSize = GetFileVersionInfoSize(modName, &dummy);
@@ -408,8 +408,7 @@ bool CVersionInfo::GetModuleVersionInfo(LPTSTR modName = NULL) {
 		langStr = new TCHAR[0x40];
 		// Read the file description for each language and code page.
 		for(int i = 0; i < (int)(iLangTableLen / sizeof(struct LANGANDCODEPAGE)); i++) 
-			wsprintf(langStr, TEXT("\\StringFileInfo\\%04x%04x\\"), pLangTable[i].wLanguage, 
-										pLangTable[i].wCodePage);
+			wsprintf(langStr, TEXT("\\StringFileInfo\\%04x%04x\\"), pLangTable[i].wLanguage, pLangTable[i].wCodePage);
 		g_LangStr = langStr;
 	}
 

@@ -19,7 +19,7 @@
  * 
  *	Filename: TeslaDecrypter.h
  *	Defines the CTeslaDecrypter class
- *	Last revision: 04/17/2015
+ *	Last revision: 07/17/2015
  *
  */
 #pragma once
@@ -61,12 +61,7 @@ public:
 	bool DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile = NULL);
 
 	// Decrypt an entire directory, looking for a specific pattern
-<<<<<<< HEAD
 	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc;*.ezz;*.exx", bool bRecursive = true, bool bStripExt = true, bool bIsRecursiveCall = false);
-=======
-	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc", bool bRecursive = true, 
-                                          bool bStripExt = true, bool bIsRecursiveCall = false);
->>>>>>> origin/master
 
 	// Decrypt the entire Workstation
 	bool DecryptAllPcFiles(LPTSTR pattern = L"*.ecc;*.ezz;*.exx");
@@ -82,8 +77,7 @@ private:
 	bool GetSha256(LPBYTE lpBuff, DWORD dwSize, BYTE sha256[32]);
 
 	// Decrypt / encrypt with and AES CBC 256 algorithm
-	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, 
-                                         LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
+	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
 
 	// Check if a filename matches the pattern string
 	bool CheckFileNameInPattern(LPTSTR fileName, LPTSTR pattern);

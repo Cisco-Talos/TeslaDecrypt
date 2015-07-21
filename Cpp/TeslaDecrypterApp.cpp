@@ -21,7 +21,7 @@
  *	Implements the CTeslaDecrypterApp class code
  *	This class contains the main application code, Anti-TeslaCrypt routines,
  *  and Log initialization
- *	Last revision: 04/17/2015
+ *	Last revision: 07/17/2015
  *
  */
 
@@ -228,7 +228,12 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		LPTSTR impKey = SearchAndImportKeyFile();
 		if (impKey) {delete impKey; bRetVal = TRUE; }
 	}
-	
+
+	if (bDeleteDropper) 
+		// Automatically scan, kill and delete TeslaCrypt dropper
+		SearchAndKillTeslaProc(false, true, true);
+
+
 	if (!bRetVal) {
 		cl_wprintf(RED, L"\r\nError! ");
 		if (bMasterKeyStripped)
@@ -237,10 +242,6 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		wprintf(L"Unable to import the TeslaCrypt/AlphaCrypt master key!\r\n");
 		return -1;
 	}
-
-	if (bDeleteDropper) 
-		// Automatically scan, kill and delete TeslaCrypt dropper
-		SearchAndKillTeslaProc(false, true, true);
 
 
 	if (bScanEntirePc) {
@@ -300,7 +301,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 		if (!keyDatPath) {
 			cl_wprintf(RED, L"\r\nError! ");
 			wprintf(L"Unable to import the master key!\r\n"
-				L"Try to use the command line.\r\n");
+				L"Try to manually specify the file that contains the master key using the \r\nproper command line argument.\r\n");
 			return -1;
 		} else {
 			delete keyDatPath;			// Don't forget to do this
@@ -311,7 +312,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 	// Search the TeslaCrypt process (if any)
 	bRetVal = SearchAndKillTeslaProc(true);
 
-	wprintf(L"Would you like to attempt to decrypt all files encrypted by Tesla/AlphaCrypt \r\non this computer? [Y/N] ");
+	wprintf(L"Would you like to attempt to decrypt all files encrypted by Tesla/AlphaCrypt \r\non this computer, including mounted network shares? [Y/N] ");
 	wscanf_s(L"%4s", answer, COUNTOF(answer));
 	if (CHR_UPR(answer[0]) == 'Y') dwActionId = 1;
 
@@ -669,7 +670,7 @@ LPTSTR CTeslaDecrypterApp::SearchAndImportKeyFile() {
 			bMasterKeyObtained = true;
 			// Default don't keep files value
 			GetDecrypter()->KeepOriginalFiles(false);
-			wprintf(L"Master key obtained from \"%s\" file installed in this workstation.\r\n", keyFileName);
+			wprintf(L"Master key obtained from \"%s\".\r\n", keyDatPath);
 		}
 	}
 
@@ -678,8 +679,8 @@ LPTSTR CTeslaDecrypterApp::SearchAndImportKeyFile() {
 
 	if (bMasterKeyStripped) {
 		cl_wprintf(YELLOW, L"Warning! ");
-		wprintf(L"The file \"key.dat\" doesn't include the master key.\r\n"
-			L"It may have already been deleted by TeslaCrypt/AlphaCrypt.\r\n");
+		wprintf(L"The file \"%s\" doesn't include the master key.\r\n"
+			L"It may have already been deleted by TeslaCrypt/AlphaCrypt.\r\n", keyFileName);
 	}
 	delete keyDatPath;
 	return NULL;

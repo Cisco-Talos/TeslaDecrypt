@@ -19,7 +19,7 @@
  * 
  *	Filename: TeslaDecrypterApp.h
  *	Defines the CTeslaDecrypterApp class 
- *	Last revision: 04/17/2015
+ *	Last revision: 07/17/2015
  *
  */
 

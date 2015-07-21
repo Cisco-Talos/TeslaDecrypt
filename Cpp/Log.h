@@ -48,8 +48,7 @@ public:
 
 	// Get log file name
 	const LPTSTR GetLogFileName() { 
-		return this->g_strLogFile;
-	}
+		return this->g_strLogFile; }
 
 	const bool IsOpened() {
 		return (g_hLogFile && g_hLogFile != INVALID_HANDLE_VALUE);
@@ -90,11 +89,11 @@ private:
 
 private:
 	LPTSTR g_strLogFile;			// This instance log file string
-	HANDLE g_hLogFile;			// Log file handle of this CLog
+	HANDLE g_hLogFile;				// Log file handle of this CLog
 	LPTSTR g_strLogTitle;			// Log title (see LOGTITLE definition)
 	bool g_bIsAutoDeleteLog;		// Set if this log has to delete itself if there are no writing
 	bool g_bAtLeastOneWrite;		// Set if user called at least one Write function
-	bool g_bImCopy;				// True if this instance is a copy of another ones
+	bool g_bImCopy;					// True if this instance is a copy of another ones
 };
 
 #pragma region Version Information Class
@@ -111,7 +110,7 @@ public:
 	LPTSTR GetCompanyName();
 
 private:
-	// Helper functions that receive version information of a specific module (NULL = this executable)
+	// Helper functions that receive versione information of a specific module (NULL = this executable)
 	bool GetModuleVersionInfo(HMODULE hMod = NULL);
 	bool GetModuleVersionInfo(LPTSTR modName);
 
