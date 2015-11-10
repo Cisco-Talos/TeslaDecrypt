@@ -19,13 +19,15 @@
  * 
  *	Filename: TeslaDecrypter.h
  *	Defines the CTeslaDecrypter class
- *	Last revision: 04/17/2015
+ *	Last revision: 07/17/2015
  *
  */
 #pragma once
 #include "Log.h"
-
 #include "resource.h"
+
+// Include the new AlphaCrypt header
+#include "AlphaCrypt.h"
 
 // Tesla Decrypter class
 class CTeslaDecrypter
@@ -38,10 +40,13 @@ public:
 	~CTeslaDecrypter(void);
 
 	// Set if to keep the original files or not
-	bool KeepOriginalFiles(bool bValue) { g_bKeepOriginalFiles = bValue; return true; }
+	void KeepOriginalFiles(bool bValue) { g_bKeepOriginalFiles = bValue; }
 
-	// Set whether or not to delete the TEslaCrypt garbage files
-	bool DeleteTeslaCryptGarbage(bool bValue) { g_bCleanupTeslaFiles = bValue; return true; }
+	// Set whether or not to delete the TeslaCrypt garbage files
+	void DeleteTeslaCryptGarbage(bool bValue) { g_bCleanupTeslaFiles = bValue; }
+
+	// Set whether or not to force the key importing
+	void ForceKey(bool bValue) { g_bForceKey = bValue; }
 
 	// Read the "key.dat" file and obtain the Master Key
 	bool ReadKeyFile(LPTSTR fileName, BOOLEAN * pbMasterKeyStripped = NULL);
@@ -49,15 +54,17 @@ public:
 	// Manually set the master key
 	bool SetMasterKey(BYTE key[32]); 
 
+	// Get master key (if it has been set)
+	bool IsMasterKeySet(LPBYTE * lppKey = NULL, DWORD * lpdwKeySize = NULL);
+
 	// Decrypt a TeslaLocker encryped file
 	bool DecryptTeslaFile(LPTSTR orgFile, LPTSTR destFile = NULL);
 
 	// Decrypt an entire directory, looking for a specific pattern
-	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc", bool bRecursive = true, 
-                                          bool bStripExt = true, bool bIsRecursiveCall = false);
+	bool DecryptDirectory(LPTSTR dirName, LPTSTR pattern = L"*.ecc;*.ezz;*.exx", bool bRecursive = true, bool bStripExt = true, bool bIsRecursiveCall = false);
 
 	// Decrypt the entire Workstation
-	bool DecryptAllPcFiles(LPTSTR pattern = L"*.ecc");
+	bool DecryptAllPcFiles(LPTSTR pattern = L"*.ecc;*.ezz;*.exx");
 
 	// Transform a buffer in printable hex bytes
 	static LPTSTR BytesToHex(LPBYTE buff, DWORD buffSize, TCHAR delimChr = NULL);
@@ -70,8 +77,10 @@ private:
 	bool GetSha256(LPBYTE lpBuff, DWORD dwSize, BYTE sha256[32]);
 
 	// Decrypt / encrypt with and AES CBC 256 algorithm
-	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, 
-                                         LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
+	bool EncDecWithAes256(LPBYTE lpBuff, DWORD dwBuffSize, BYTE iv[16], LPBYTE * lppOut, LPDWORD lpdwOutBuffSize, bool bEncrypt = false);
+
+	// Check if a filename matches the pattern string
+	bool CheckFileNameInPattern(LPTSTR fileName, LPTSTR pattern);
 
 private:
 	// The shifted Master key (32 bytes)
@@ -86,11 +95,17 @@ private:
 	// Set to TRUE if ìI have to keep the original encrypted files
 	bool g_bKeepOriginalFiles;
 
+	// Set to TRUE if I would like to force the key importing process
+	bool g_bForceKey;
+
 	// This class instance Log
 	CLog * g_pLog;
 
 	// Set to TRUE if this instance has created the log
 	bool g_bIsMyLog;				
+
+	// The class instance that manages AlphaCrypt (allocated only as needed)
+	CAlphaCrypt * g_pAlphaDecoder;
 
 	// Set to true if I have to delete all the TeslaCrypt garbage files
 	bool g_bCleanupTeslaFiles;

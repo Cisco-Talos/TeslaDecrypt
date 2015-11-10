@@ -19,7 +19,7 @@
  * 
  *	Filename: TeslaDecrypterApp.h
  *	Defines the CTeslaDecrypterApp class 
- *	Last revision: 04/17/2015
+ *	Last revision: 07/17/2015
  *
  */
 
@@ -37,7 +37,10 @@ public:
 	int Main(int argc, TCHAR * argv[]);
 
 	// Parse the command line
-	bool ParseCommandLine(int argc, TCHAR * argv[]);
+	int ParseCommandLine(int argc, TCHAR * argv[]);
+
+	// Perform a classical search in a buffer
+	static LPBYTE SearchUString(LPBYTE buffer, DWORD buffSize, LPTSTR lpString, bool bCaseSensitive);
 
 private:
 	// Initialize the global APP Log
@@ -70,12 +73,11 @@ private:
 	// Search and kill the TeslaCrypt process
 	bool SearchAndKillTeslaProc(bool bAskUser = true, bool bKill = true, bool bDelete = false);
 
-	// Perform a classical search in a buffer
-	static LPBYTE SearchUString(LPBYTE buffer, DWORD buffSize, LPTSTR lpString, bool bCaseSensitive);
-
 private:
 	// %APPDATA% path
 	LPTSTR g_strAppData;
+	// Local %APPDATA% path
+	LPTSTR g_strLocalAppData;
 
 	// The global application Log
 	CLog * g_pLog;

@@ -46,7 +46,7 @@ typedef unsigned __int64 QWORD;
 
 // Application Title
 #define APPTITLE L"Talos TeslaCrypt Decryptor"
-#define LOGTITLE L"Talos TeslaCrypt Decryptor 0.1"
+#define LOGTITLE L"Talos TeslaCrypt Decryptor 0.2"
 
 #define CHR_UPR(x) (x & ~0x20)
 #define CHR_LWR(x) (x | 0x20)
