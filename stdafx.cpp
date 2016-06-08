@@ -51,7 +51,33 @@ LPTSTR Trim(LPTSTR string, TCHAR leftCharToTrim, TCHAR rightCharToTrim) {
 	}
 
 	if (!startSpaces && !endSpaces) return string;
-	RtlCopyMemory(string, string + startSpaces, (cch - startSpaces - endSpaces) * sizeof(WCHAR));
+	RtlCopyMemory(string, string + startSpaces, (cch - startSpaces - endSpaces) * sizeof(TCHAR));
+	string[cch - startSpaces - endSpaces]= 0;
+	return string;
+}
+LPSTR Trim(LPSTR string, CHAR leftCharToTrim, CHAR rightCharToTrim) {
+	if (!string) return NULL;
+	int cch = strlen(string);			// Chars counter
+	int startSpaces = 0;				// Start spaces counter
+	int endSpaces = 0;					// End Spaces counter
+
+	// Count start spaces
+	for (int i = 0; i < cch; i++) 
+		if (string[i] != leftCharToTrim) break;
+		else startSpaces++;
+	
+	// Cont end spaces
+	for (int i = cch-1; i > 0; i--) 
+		if (string[i] != rightCharToTrim) break;
+		else endSpaces++;
+
+	if (leftCharToTrim != rightCharToTrim) {
+		if (startSpaces < endSpaces) endSpaces = startSpaces;
+		else startSpaces = endSpaces;
+	}
+
+	if (!startSpaces && !endSpaces) return string;
+	RtlCopyMemory(string, string + startSpaces, (cch - startSpaces - endSpaces) * sizeof(CHAR));
 	string[cch - startSpaces - endSpaces]= 0;
 	return string;
 }
@@ -124,7 +150,7 @@ DWORD ReadLine(LPTSTR buff, int buffCch) {
 
 void SetConsoleColor(ConsoleColor c){
 	HANDLE hCon = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleTextAttribute(hCon, c);
+    SetConsoleTextAttribute(hCon, (WORD)c);
 }
 
 // Color WPrintf 

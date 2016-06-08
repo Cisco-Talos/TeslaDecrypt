@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group
+ *  Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group
  *
- *  Authors: Andrea Allievi and Emmanuel Tacheau
+ *  Authors: Andrea Allievi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -22,15 +22,17 @@
 #include "TeslaDecrypter.h"
 #include "TeslaDecrypterApp.h"
 #include <shellapi.h>
-
+#include "openssl\\ec.h"
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
                      int       nCmdShow)
 {
+	UNREFERENCED_PARAMETER(hInstance);
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+	UNREFERENCED_PARAMETER(nCmdShow);
 	LPWSTR strCompleteCmdLine = NULL;		// Complete entry point command line
 	LPWSTR * argv = NULL;					// Argument array
 	int argc = 0;							// Number of arguments

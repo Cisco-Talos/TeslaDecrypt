@@ -182,6 +182,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\EcFactorizer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\entrypoint.cpp"
 				>
 			</File>
@@ -228,6 +232,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\EcFactorizer.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Log.h"
 				>
 			</File>
@@ -266,6 +274,10 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath=".\readme.md"
+			>
+		</File>
 		<File
 			RelativePath=".\Version History.txt"
 			>

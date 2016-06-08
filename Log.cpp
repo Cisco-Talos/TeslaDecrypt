@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group
+ *  Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group
  *
- *  Authors: Andrea Allievi and Emmanuel Tacheau
+ *  Authors: Andrea Allievi 
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
  * 
  *	Filename: Log.cpp
  *	Log engine implementation file
- *	Last revision: 04/17/2015
+ *	Last revision: 05/30/2016
  *
  */
 #include "stdafx.h"
@@ -227,7 +227,7 @@ void CLog::Write(LPWSTR dbgStr) {
 		bytesToWrite = (DWORD)wcslen(dbgStr) + 1;
 		logStr = new CHAR[bytesToWrite];
 		sprintf_s(logStr, bytesToWrite, "%S", dbgStr);
-		BOOL retVal = WriteFile(g_hLogFile, logStr, bytesToWrite - 1, &bytesWritten, NULL);
+		WriteFile(g_hLogFile, logStr, bytesToWrite - 1, &bytesWritten, NULL);			//BOOL retVal = 
 		delete[] logStr;
 	}
 	g_bAtLeastOneWrite = true;
@@ -253,7 +253,7 @@ void CLog::Write(LPSTR dbgStr) {
 		OutputDebugStringA(dbgStr);										// write to debug output
 	} else {
 		bytesToWrite = (DWORD)strlen(dbgStr);
-		BOOL retVal = WriteFile(g_hLogFile, dbgStr, bytesToWrite, &bytesWritten, NULL);
+		WriteFile(g_hLogFile, dbgStr, bytesToWrite, &bytesWritten, NULL);
 	}
 	g_bAtLeastOneWrite = true;
 }
@@ -328,11 +328,9 @@ LPTSTR CVersionInfo::GetFileVersionString() {
 
 	fixedVer = GetFixedVersion();
 	if (!g_fVerStr) g_fVerStr = new TCHAR[0x30];
-	wsprintf(g_fVerStr, L"%i.%i.%i.%i", 
+	wsprintf(g_fVerStr, L"%i.%i", 
 		(WORD)(fixedVer.dwFileVersionMS >> 16),
-		(WORD)(fixedVer.dwFileVersionMS),
-		(WORD)(fixedVer.dwFileVersionLS >> 16),
-		(WORD)(fixedVer.dwFileVersionLS));
+		(WORD)(fixedVer.dwFileVersionMS));
 	return g_fVerStr;
 }
 

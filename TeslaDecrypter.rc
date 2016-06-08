@@ -81,8 +81,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,2,0,1
- PRODUCTVERSION 0,2,0,1
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
  FILEFLAGSMASK 0x17L
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -99,12 +99,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Cisco Systems Inc."
             VALUE "FileDescription", "TeslaCrypt Decryptor"
-            VALUE "FileVersion", "0, 2, 0, 1"
+            VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "TeslaCrypt Decryptor"
-            VALUE "LegalCopyright", "Copyright (C) 2015 Talos Security Intelligence and Research Group"
+            VALUE "LegalCopyright", "Copyright (C) 2016 Talos Security Intelligence and Research Group"
             VALUE "OriginalFilename", "TeslaDecryptor.exe"
             VALUE "ProductName", "TeslaCrypt Decryptor"
-            VALUE "ProductVersion", "0, 2, 0, 1"
+            VALUE "ProductVersion", "1, 0, 0, 1"
         END
     END
     BLOCK "VarFileInfo"

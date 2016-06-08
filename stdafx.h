@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group
+ *  Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group
  *
- *  Authors: Andrea Allievi and Emmanuel Tacheau
+ *  Authors: Andrea Allievi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
  * 
  *	Filename: stdafx.h
  *	Precompiled header file
- *	Last revision: 04/17/2015
+ *	Last revision: 05/30/2016
  *
  */
 #pragma once
@@ -44,9 +44,9 @@
 #include <intrin.h> 
 typedef unsigned __int64 QWORD;
 
-// Application Title
+// Application Title and version
 #define APPTITLE L"Talos TeslaCrypt Decryptor"
-#define LOGTITLE L"Talos TeslaCrypt Decryptor 0.2"
+#define LOGTITLE L"Talos TeslaCrypt Decryptor 1.0"
 
 #define CHR_UPR(x) (x & ~0x20)
 #define CHR_LWR(x) (x | 0x20)
@@ -62,6 +62,7 @@ typedef unsigned __int64 QWORD;
 
 // Delete white space from start and end of a string
 LPTSTR Trim(LPTSTR string, TCHAR leftCharToTrim = ' ', TCHAR rightCharToTrim = ' ');
+LPSTR Trim(LPSTR string, CHAR leftCharToTrim = ' ', CHAR rightCharToTrim = ' ');
 
 // Get if a file Exist
 bool FileExists(LPTSTR fileName);

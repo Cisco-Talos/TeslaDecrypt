@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group
+ *  Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group
  *
- *  Authors: Andrea Allievi and Emmanuel Tacheau
+ *  Authors: Andrea Allievi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
  * 
  *	Filename: Log.h
  *	Log engine header file 
- *	Last revision: 04/17/2015
+ *	Last revision: 05/30/2016
  *
  */
 

@@ -19,7 +19,7 @@
  * 
  *	Filename: TeslaDecrypterApp.h
  *	Defines the CTeslaDecrypterApp class 
- *	Last revision: 07/17/2015
+ *	Last revision: 05/30/2016
  *
  */
 
@@ -45,33 +45,26 @@ public:
 private:
 	// Initialize the global APP Log
 	bool InitializeLog();
-
 	// Show this application command line usage
 	void ShowUsage();
-
 	// Create console screen buffer and set it to application
 	bool SetConsoleBuffers();
-
 	// Create application console and attach to executable
 	bool CreateAndAttachConsole();
-
 	// Normal application startup without any command line
 	int NoCmdLineMain();
-
 	// Compose destination decrypted file name
 	static LPTSTR ComposeDestFileName(LPTSTR orgFile);
-
-	// Get the decrypter and allocate one if needed
-	CTeslaDecrypter * GetDecrypter();
-
 	// Search the "key.dat" file in standard locations
 	LPTSTR SearchAndImportKeyFile();
-
 	// Search if there is a suspicious TeslaCrypt process
 	DWORD SearchForTeslaCryptProcess(LPTSTR lpFileFullPath = NULL, DWORD sizeInChars = 0);
-
 	// Search and kill the TeslaCrypt process
 	bool SearchAndKillTeslaProc(bool bAskUser = true, bool bKill = true, bool bDelete = false);
+	// Launch the MSIEVE log analysis and exit
+	bool ProcessMsieveLog(LPTSTR lpLogFile, LPTSTR lpInfectedFile);
+	// Get the decrypter and allocate one if needed
+	CTeslaDecrypter * GetDecrypter();
 
 private:
 	// %APPDATA% path

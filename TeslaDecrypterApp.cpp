@@ -1,7 +1,7 @@
 /*
- *  Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group
+ *  Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group
  *
- *  Authors: Andrea Allievi and Emmanuel Tacheau
+ *  Authors: Andrea Allievi
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -21,12 +21,13 @@
  *	Implements the CTeslaDecrypterApp class code
  *	This class contains the main application code, Anti-TeslaCrypt routines,
  *  and Log initialization
- *	Last revision: 07/17/2015
+ *	Last revision: 05/30/2016
  *
  */
 
 #include "StdAfx.h"
 #include "TeslaDecrypterApp.h"
+#include "AlphaCrypt.h"
 #include <Shlobj.h>
 #include <TlHelp32.h>
 
@@ -71,7 +72,7 @@ bool CTeslaDecrypterApp::InitializeLog() {
 	if (g_pLog) return false;
 
 	// Get my path and initialize log
-	DWORD len = GetModuleFileName(GetModuleHandle(NULL), logFile, COUNTOF(logFile));
+	GetModuleFileName(GetModuleHandle(NULL), logFile, COUNTOF(logFile));
 	LPTSTR dotPtr = wcsrchr(logFile, L'.');
 	if (dotPtr) wcscpy_s(dotPtr, 5, L".log");
 
@@ -90,18 +91,20 @@ CTeslaDecrypter * CTeslaDecrypterApp::GetDecrypter() {
 // Show this application command line usage
 void CTeslaDecrypterApp::ShowUsage() {
 	LPTSTR cmdLineStr = L"Command line usage:\r\n"
-		L"TeslaDecrypter [/key:<hex_key>] [/keyfile:<keyfile>] [/file:<encrypted_file>] [/dir:<encrypted_directory>] [/KeepOriginal]\r\n"
+		L"TeslaDecrypter [/key:<hex_key>] [/file:<encrypted_file>] [/dir:<encrypted_directory>] [/KeepOriginal]\r\n"
 		L"\r\n"
 		L"Where:\r\n"
-		L"/help - Show this help message\r\n"
-		L"/key - Manually specify the master key for decryption (32 bytes/64 digits)\r\n"
-		L"/keyfile - Specify the key file used to recover the master key\r\n"
-		L"/forcekey - Force the key to be imported even if it hasn't been verified\r\n"
-		L"/file - Decrypt an encrypted file\r\n"
-		L"/dir - Decrypt all files in the target directory and its subdirectories\r\n"
-		L"/scanEntirePc - Decrypt all files on computer\r\n"
-		L"/KeepOriginal - Keep original file(s) through the decryption process\r\n"
-		L"/deleteTeslaCrypt - Automatically kill and delete the TeslaCrypt dropper\r\n";
+		L"/help			- 	Show this help message\r\n"
+		L"/aeskey		- 	Manually specify the AES master key for decryption (32 bytes)\r\n"
+		L"/privkey		- 	Manually specify the EC victim's private key for decryption (32 bytes)\r\n"
+		L"/keyfile		-	Specify the key file used to recover the master key\r\n"
+		L"/forcekey 		-	Force the key to be imported even if it has not been verified\r\n"
+		L"/process-msieve 	- 	Process an MSIEVE log file and recover the AES encryption key\r\n"
+		L"/file 		- 	Decrypt an encrypted file\r\n"
+		L"/dir 			-	Decrypt all files in the target directory and its subdirectories\r\n"
+		L"/scanEntirePc		-	Decrypt all files on computer\r\n"
+		L"/KeepOriginal		-	Keep original file(s) through the decryption process\r\n"
+		L"/deleteTeslaCrypt	- 	Automatically kill and delete the TeslaCrypt dropper\r\n";
 
 	if (g_bConsoleAttached) 
 		wprintf(cmdLineStr);
@@ -114,9 +117,12 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 	LPTSTR strOrgFile = NULL;						// Original requested file
 	LPTSTR strOrgDir = NULL;						// Original requested directoty
 	LPTSTR strKeyFile = NULL;						// Specific key file to use
-	LPTSTR strMasterKey = NULL;						// The specific master key
+	LPTSTR strAesKey = NULL;						// The specific per-session AES key
+	LPTSTR strPrivKey = NULL;						// The specific global victim private key (Gpriv)
+	LPTSTR strMsieveLog = NULL;						// The MSIEVE log to process
 	DWORD dwStrLen = 0;								// String size in TCHARs
-	BYTE masterKey[32] = {0};						// Specific master key 
+	BYTE aesKey[32] = {0};							// Specific session AES key 
+	BYTE privKey[32] = {0};							// Specific global victim private key (Gpriv)
 	bool bScanEntirePc = false;						// TRUE if I have to scan the entire Pc
 	bool bDeleteDropper = false;					// TRUE if I have to automatically search and delete TeslaCrypt dropper
 	BOOLEAN bMasterKeyStripped = FALSE;
@@ -159,70 +165,113 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 			pDec->ForceKey(true);
 		
 
-		else if (_wcsicmp(arg, L"key") == 0) {
-			if (strMasterKey || strKeyFile) return false;
-			if (!param) return false;
-			strMasterKey = Trim(param);
-			dwStrLen = wcslen(strMasterKey);
+		else if (_wcsicmp(arg, L"aeskey") == 0) {
+			if (strAesKey || strKeyFile) return FALSE;
+			if (!param) return FALSE;
+			strAesKey = Trim(param);
+			dwStrLen = wcslen(strAesKey);
 			if (dwStrLen != 64) {
 				cl_wprintf(RED, L"Error! ");
-				wprintf(L"Master key should be 64 characters long.");
-				return true;
+				wprintf(L"The AES key should be 32-bytes long.");
+				return TRUE;
 			}
-			LPBYTE lpMasterKey = CTeslaDecrypter::HexToBytes(strMasterKey, dwStrLen);
-			if (lpMasterKey) {
-				RtlCopyMemory(masterKey, lpMasterKey, COUNTOF(masterKey));
-				delete lpMasterKey;			// DO NOT forget to do this
+			LPBYTE lpAesKey = CTeslaDecrypter::HexToBytes(strAesKey, dwStrLen);
+			if (lpAesKey) {
+				RtlCopyMemory(aesKey, lpAesKey, COUNTOF(aesKey));
+				delete lpAesKey;			// DO NOT forget to do this
 			}
 			else {
 				cl_wprintf(RED, L"Error! ");
 				wprintf(L"Parsing error! Bad HEX key specified. \r\n");
-				return true;
+				return TRUE;
+			}
+		}
+
+		else if (_wcsicmp(arg, L"privkey") == 0) {
+			if (strPrivKey || strAesKey || strKeyFile) return FALSE;
+			if (!param) return FALSE;
+			strPrivKey = Trim(param);
+			dwStrLen = wcslen(strPrivKey);
+			if (dwStrLen != 64) {
+				cl_wprintf(RED, L"Error! ");
+				wprintf(L"The EC private key should be 32-bytes long.");
+				return TRUE;
+			}
+			LPBYTE lpPrivKey = CTeslaDecrypter::HexToBytes(strPrivKey, dwStrLen);
+			if (lpPrivKey) {
+				RtlCopyMemory(privKey, lpPrivKey, COUNTOF(privKey));
+				delete lpPrivKey;
+			}
+			else {
+				cl_wprintf(RED, L"Error! ");
+				wprintf(L"Parsing error! Bad HEX key specified. \r\n");
+				return TRUE;
 			}
 		}
 
 		else if (_wcsicmp(arg, L"keyfile") == 0) {
-			if (strKeyFile || strMasterKey) return false;
-			if (!param) return false;
+			if (strKeyFile || strAesKey) return FALSE;
+			if (!param) return FALSE;
 			strKeyFile = Trim(param, L'\"', L'\"');
 			dwStrLen = wcslen(strKeyFile);
 			if (!FileExists(strKeyFile)) {
 				cl_wprintf(RED, L"Error! ");
 				wprintf(L"Key file \"%s\" does not exist.", strKeyFile);
-				return true;
+				return TRUE;
 			}
 		}
 
 		else if (_wcsicmp(arg, L"file") == 0)  {
-			if (strOrgFile || strOrgDir) return false;
-			if (!param) return false;
+			if (strOrgFile || strOrgDir) return FALSE;
+			if (!param) return FALSE;
 			strOrgFile = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgFile)) {
 				cl_wprintf(RED, L"Error! ");
 				wprintf(L"File \"%s\" does not exist.\r\n", strOrgFile);
-				return true;
+				return TRUE;
 			}
 		}
 
 		else if (_wcsicmp(arg, L"dir") == 0) {
-			if (strOrgDir || strOrgFile) return false;
-			if (!param) return false;
+			if (strOrgDir || strOrgFile) return FALSE;
+			if (!param) return FALSE;
 			strOrgDir = Trim(param, L'\"', L'\"');
 			if (!FileExists(strOrgDir)) {
 				cl_wprintf(RED, L"Error! ");
 				wprintf(L"Directory \"%s\" does not exist.\r\n", strOrgDir);
-				return true;
+				return TRUE;
 			}
 		}
 
+		else if (_wcsicmp(arg, L"process-msieve") == 0) {
+			strMsieveLog = Trim(param, L'\"', L'\"');
+			if (!FileExists(strMsieveLog)) {
+				cl_wprintf(RED, L"Error! ");
+				wprintf(L"Msieve log file \"%s\" does not exist.\r\n", strMsieveLog);
+				return TRUE;
+			}
+		}
 		else 
 			// Unrecognized param
-			return false;
+			return FALSE;
 	}	
 
-	// First import the key file or master key in the decrypter
+	// First thing to do is to process The MSIEVE log (if any)
+	if (strMsieveLog) {
+		if (!strOrgFile) {
+			cl_wprintf(RED, L"Error!\r\n");
+			wprintf(L"To properly analyze a log generated by MSIEVE you should specify\r\n"
+				L"an encrypted TeslaCrypt file using the \"/file\" argument.\r\n");
+			return TRUE;
+		}
+		ProcessMsieveLog(strMsieveLog, strOrgFile);
+		return TRUE;
+	}
+
+	// Import the key file or AES key in the decrypter
+	if (strPrivKey) pDec->ImportTeslaVictimPrivKey(privKey);
 	if (strKeyFile) bRetVal = pDec->ReadKeyFile(strKeyFile, &bMasterKeyStripped);
-	else if (strMasterKey) bRetVal = pDec->SetMasterKey(masterKey);
+	else if (strAesKey) bRetVal = pDec->SetMasterKey(aesKey);
 	else {
 		// Use the standard research algorithm
 		LPTSTR impKey = SearchAndImportKeyFile();
@@ -234,16 +283,8 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		SearchAndKillTeslaProc(false, true, true);
 
 
-	if (!bRetVal) {
-		cl_wprintf(RED, L"\r\nError! ");
-		if (bMasterKeyStripped)
-			wprintf(L"The key file doesn't include the master key.\r\n"
-				L"It may have already been deleted by TeslaCrypt/AlphaCrypt.\r\n");
-		wprintf(L"Unable to import the TeslaCrypt/AlphaCrypt master key!\r\n");
-		return -1;
-	}
-
-
+	/************************************************************************************************
+	 *								DECRYPTING arguments parsing:									*/
 	if (bScanEntirePc) {
 		// Decrypt all PC files
 		pDec->DeleteTeslaCryptGarbage(true);
@@ -253,7 +294,6 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		wprintf(L"Decrypting directory \"%s\"... ", strOrgDir);
 		bRetVal = GetDecrypter()->DecryptDirectory(strOrgDir);
 	}
-
 	else if (strOrgFile) {
 		LPTSTR targetFile = NULL;
 		wprintf(L"Decrypting file \"%s\"... ", wcsrchr(strOrgFile, '\\') + 1);
@@ -268,24 +308,41 @@ int CTeslaDecrypterApp::ParseCommandLine(int argc, TCHAR * argv[]) {
 		return bRetVal;	
 	}
 
-	if (bRetVal) {
+	if (bRetVal == ERROR_SUCCESS) {
 		cl_wprintf(GREEN, L"Success!\r\n");
 		if (strOrgDir)
 			wprintf(L"Encrypted files in the target directory have been decrypted.\r\n"
-			L"See the log file for all the details.\r\n");
+			L"See the log file for details.\r\n");
 	} else {
 		cl_wprintf(RED, L"Error!\r\n");
-		if (strOrgDir)
+		if (strOrgDir && bRetVal != ERROR_BADKEY)
 			wprintf(L"Errors while decrypting files.\r\n"
 			L"See log file for details.\r\n");
 	}
 
-	return (bRetVal > 0 ? 1 : -1);
+	// Try to launch the factorization if needed:
+	if (bRetVal == ERROR_BADKEY && pDec->GetLastFileType() == ENC_FILE_TYPE_TESLACRYPT_2) {
+		// Ask and launch the Factorization?
+		Sleep(1400);
+		bRetVal = (GetDecrypter()->LaunchFactorizationAlgo() == true);
+		if (bRetVal) {
+			// Restart the process
+			wprintf(L"Restarting....\r\n");
+			Sleep(800);
+			system("cls");
+			CVersionInfo appInfo;
+			wprintf(L"Talos %s %s\r\n", appInfo.GetProductName(), appInfo.GetFileVersionString());
+			return ParseCommandLine(argc, argv);
+		}
+	}
+	/*************************************************************************************************/
+
+	return (bRetVal == ERROR_SUCCESS ? 1 : -1);
 }
 
 // Normal application startup without any command line
 int CTeslaDecrypterApp::NoCmdLineMain() {
-	bool bRetVal = false;
+	BOOL bRetVal = FALSE;
 	DWORD dwStrLen = 0;
 	LPTSTR keyDatPath = NULL;					// "key.dat" file standard location
 	TCHAR answer[8] = {0};						// User answer
@@ -297,13 +354,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 	if (!GetDecrypter()->IsMasterKeySet()) {
 		// Search key.dat file
 		keyDatPath = SearchAndImportKeyFile();
-
-		if (!keyDatPath) {
-			cl_wprintf(RED, L"\r\nError! ");
-			wprintf(L"Unable to import the master key!\r\n"
-				L"Try to manually specify the file that contains the master key using the \r\nproper command line argument.\r\n");
-			return -1;
-		} else {
+		if (keyDatPath) {
 			delete keyDatPath;			// Don't forget to do this
 			keyDatPath = NULL;
 		}
@@ -335,7 +386,7 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 	}
 
 	// Ask the user for the backup
-	wprintf(L"Would you like to make a backup of the original encrypted file(s)? [Y/N] ");
+	wprintf(L"Would you like to make a backup of the encrypted file(s)? [Y/N] ");
 	rewind(stdin);
 	wscanf_s(L"%4s", answer, COUNTOF(answer));
 	if (CHR_UPR(answer[0]) == 'Y') bDoBackup = true;
@@ -343,51 +394,70 @@ int CTeslaDecrypterApp::NoCmdLineMain() {
 	// Set the backup mode
 	GetDecrypter()->KeepOriginalFiles(bDoBackup);
 
-	switch (dwActionId) {
-		case 1:
-			// Decrypt all PC files
-			GetDecrypter()->DeleteTeslaCryptGarbage(true);
-			bRetVal = GetDecrypter()->DecryptAllPcFiles();
-			break;
+	while (TRUE) {
+		switch (dwActionId) {
+			case 1:
+				// Decrypt all PC files
+				GetDecrypter()->DeleteTeslaCryptGarbage(true);
+				bRetVal = GetDecrypter()->DecryptAllPcFiles();
+				break;
 
-		case 2:
-			// Decrypt a file or a directory
-			if (dwFileAttr & FILE_ATTRIBUTE_DIRECTORY) {
-				// The location is a directory
-				LPTSTR dirOnlyName = wcsrchr(dirOrFileToDecrypt, '\\');
-				if (dirOnlyName) dirOnlyName++;
-				else dirOnlyName = dirOrFileToDecrypt;
-				wprintf(L"\r\nDecrypting \"%s\" directory... ", dirOnlyName);
-				bRetVal = GetDecrypter()->DecryptDirectory(dirOrFileToDecrypt);
-				if (bRetVal) {
-					cl_wprintf(GREEN, L"Success!\r\n");
-					wprintf(L"Encrypted files in the target directory have been decrypted.\r\n"
-						L"See the log file for details.\r\n");
+			case 2:
+				// Decrypt a file or a directory
+				if (dwFileAttr & FILE_ATTRIBUTE_DIRECTORY) {
+					// The location is a directory
+					LPTSTR dirOnlyName = wcsrchr(dirOrFileToDecrypt, '\\');
+					if (dirOnlyName) dirOnlyName++;
+					else dirOnlyName = dirOrFileToDecrypt;
+					wprintf(L"\r\nDecrypting \"%s\" directory... ", dirOnlyName);
+					bRetVal = GetDecrypter()->DecryptDirectory(dirOrFileToDecrypt);
+					if (bRetVal == ERROR_SUCCESS) {
+						cl_wprintf(GREEN, L"Success!\r\n");
+						wprintf(L"Encrypted files in the target directory have been decrypted.\r\n"
+							L"See the log file for details.\r\n");
+					} else {
+						cl_wprintf(RED, L"Error!\r\n");
+						if (bRetVal != ERROR_BADKEY)
+							wprintf(L"Errors while decrypting the files.\r\n"
+								L"See log file for details.\r\n");
+					}
 				} else {
-					cl_wprintf(RED, L"Error!\r\n");
-					wprintf(L"Errors while decrypting the files.\r\n"
-						L"See log file for details.\r\n");
+					// The path specify a file
+					// Compose the target path
+					LPTSTR targetFile = ComposeDestFileName(dirOrFileToDecrypt);
+					wprintf(L"\r\nDecrypting \"%s\" file... ", wcsrchr(dirOrFileToDecrypt, '\\') + 1);
+					bRetVal = GetDecrypter()->DecryptTeslaFile(dirOrFileToDecrypt, targetFile);
+					delete targetFile;			// Don't forget to do this
+					if (bRetVal == ERROR_SUCCESS)
+						cl_wprintf(GREEN, L"Success!\r\n");
+					else
+						cl_wprintf(RED, L"Error!\r\n");
 				}
-			} else {
-				// The path specify a file
-				// Compose the target path
-				LPTSTR targetFile = ComposeDestFileName(dirOrFileToDecrypt);
-				wprintf(L"\r\nDecrypting \"%s\" file... ", wcsrchr(dirOrFileToDecrypt, '\\') + 1);
-				bRetVal = GetDecrypter()->DecryptTeslaFile(dirOrFileToDecrypt, targetFile);
-				delete targetFile;			// Don't forget to do this
-				if (bRetVal)
-					cl_wprintf(GREEN, L"Success!\r\n");
-				else
-					cl_wprintf(RED, L"Error!\r\n");
+				break;
+
+			default:
+				// PASS the code shouldn't reach this point
+				bRetVal = false;
+				break;
+		}
+
+		// Try to launch the factorization if needed:
+		if (bRetVal == ERROR_BADKEY && GetDecrypter()->GetLastFileType() == ENC_FILE_TYPE_TESLACRYPT_2) {
+			// Ask and launch the Factorization?
+			Sleep(1400);
+			bRetVal = (GetDecrypter()->LaunchFactorizationAlgo() == true);
+			if (bRetVal) {
+				// Restart the process
+				wprintf(L"Restarting....\r\n");
+				Sleep(800);
+				system("cls");
+				CVersionInfo appInfo;
+				wprintf(L"Talos %s %s\r\n", appInfo.GetProductName(), appInfo.GetFileVersionString());
+				continue;
 			}
-			break;
-
-		default:
-			// PASS the code shouldn't reach this point
-			bRetVal = false;
-			break;
+		}
+		break;
 	}
-
 	return (bRetVal ? 1 : -1);
 }
 
@@ -397,11 +467,11 @@ int CTeslaDecrypterApp::Main(int argc, TCHAR * argv[]) {
 	
 	// For now use the console App
 	CreateAndAttachConsole();
-
-	wprintf(L"%s 0.2\r\n", APPTITLE);
+	CVersionInfo appInfo;
+	wprintf(L"Talos %s %s\r\n", appInfo.GetProductName(), appInfo.GetFileVersionString());
 	wprintf(L"http://blogs.cisco.com/security/talos/teslacrypt\r\n\r\n");
 	wprintf(L"Authors: Andrea Allievi and Emmanuel Tacheau\r\n");
-	wprintf(L"Copyright (C) 2015 Cisco Talos Security Intelligence and Research Group\r\n");
+	wprintf(L"Copyright (C) 2016 Cisco Talos Security Intelligence and Research Group\r\n");
 	wprintf(L"\r\n");
 
 	if (argc > 1) {
@@ -514,7 +584,7 @@ DWORD CTeslaDecrypterApp::SearchForTeslaCryptProcess(LPTSTR lpFileFullPath, DWOR
 	if (lpMemBuff) VirtualFree(lpMemBuff, 0, MEM_RELEASE);
 
 	if (!dwFoundProcId)
-		g_pLog->WriteLine(L"SearchForTeslaCryptProcess - No active TeslaCrypt process found in this system!");
+		g_pLog->WriteLine(L"SearchForTeslaCryptProcess - No active TeslaCrypt process found on this system!");
 
 	return dwFoundProcId;
 }
@@ -618,13 +688,9 @@ LPTSTR CTeslaDecrypterApp::SearchAndImportKeyFile() {
 
 	// Compose the "key.dat" full path
 	// Try to use the key.dat file located inside my path
-	// bRetVal = GetModuleFileName(NULL, keyDatPath, COUNTOF(keyDatPath));
-	bRetVal = GetCurrentDirectory(MAX_PATH, keyDatPath);
-	dwStrLen = wcslen(keyDatPath);
-	if (keyDatPath[dwStrLen-1] != '\\') {
-		keyDatPath[dwStrLen++] = '\\';
-		keyDatPath[dwStrLen] = 0;
-	}
+	bRetVal = GetModuleFileName(NULL, keyDatPath, MAX_PATH);
+	LPTSTR lpSlashPtr = wcsrchr(keyDatPath, L'\\');
+	if (lpSlashPtr) lpSlashPtr[1] = 0;
 	wcscat_s(keyDatPath, MAX_PATH, keyFileName);
 
 	if (!FileExists(keyDatPath)) {
@@ -690,6 +756,8 @@ LPTSTR CTeslaDecrypterApp::SearchAndImportKeyFile() {
 LPTSTR CTeslaDecrypterApp::ComposeDestFileName(LPTSTR strOrgFile) {
 	DWORD dwStrLen = 0;
 	LPTSTR targetFile = NULL;
+	LPTSTR extPtr = TESLA_CRYPT_ALL_EXT_PATTERN;				// The extension ptr in TESLA_CRYPT_ALL_EXT_PATTERN
+	bool bFileHasTeslaExt = false;
 	if (!strOrgFile) return NULL;
 
 	dwStrLen = wcslen(strOrgFile) + 20;
@@ -697,9 +765,18 @@ LPTSTR CTeslaDecrypterApp::ComposeDestFileName(LPTSTR strOrgFile) {
 
 	wcscpy_s(targetFile, dwStrLen, strOrgFile);
 	LPTSTR dotPtr = wcsrchr(targetFile, L'.');
-	if ((dotPtr && _wcsicmp(dotPtr, L".ecc") == 0) ||
-		(dotPtr && _wcsicmp(dotPtr, L".ezz") == 0) || 
-		(dotPtr && _wcsicmp(dotPtr, L".exx") == 0))
+
+	while (dotPtr) {
+		LPTSTR semicolonPtr = NULL;
+		extPtr = wcschr(extPtr + 1, L'.');
+		if (!extPtr) break;
+		semicolonPtr = wcschr(extPtr, L';');
+		if (!semicolonPtr) semicolonPtr = extPtr + wcslen(semicolonPtr);
+		bFileHasTeslaExt = (_wcsnicmp(dotPtr, extPtr, (DWORD)(semicolonPtr - extPtr)) == 0);
+		if (bFileHasTeslaExt) break;
+	};
+
+	if (bFileHasTeslaExt)
 	{
 		memset(dotPtr, 0, 4 * sizeof(TCHAR));
 		dotPtr = wcsrchr(targetFile, L'.');
@@ -746,3 +823,40 @@ bool CTeslaDecrypterApp::CreateAndAttachConsole() {
 }
 #pragma endregion
 
+#pragma region MSIEVE support functions
+// Launch the MSIEVE log analysis and exit
+bool CTeslaDecrypterApp::ProcessMsieveLog(LPTSTR lpLogFile, LPTSTR lpInfectedFile) {
+	LPTSTR fileOnlyName = NULL;					// The file only name
+	BYTE aes_key[32] = {0};						// The found AES key
+	LPTSTR aes_key_hex = NULL;					// The AES key in HEX
+	bool bRetVal = false;
+
+	g_pLog->WriteLine(L"CTeslaDecrypterApp - Command arguments specified to parse a Msieve log file (\"%s\") using "
+		L"\"%s\" encrypted file.", lpLogFile, lpInfectedFile);
+	fileOnlyName = wcsrchr(lpLogFile, L'\\');
+	if (fileOnlyName) fileOnlyName++;
+	wprintf(L"Processing \"%s\" Msieve log file... ", fileOnlyName);
+
+	bRetVal = GetDecrypter()->ProcessMsieveLog(lpLogFile, lpInfectedFile, aes_key);
+	if (bRetVal) {
+		cl_wprintf(GREEN, L"Success!\r\n");
+		aes_key_hex = GetDecrypter()->BytesToHex(aes_key, 32);
+		wprintf(L"\r\nThe Msieve log has been successfully processed.\r\n"
+			L"The victim private key and the per-session AES decryption key have been\r\n"
+			L"reconstructed. A file named \"key.dat\" has been created into the \r\n"
+			L"application path.\r\n\r\n");
+		if (aes_key_hex) {
+			wprintf(L"Found AES key: 0x%s\r\n", aes_key_hex);
+			delete[] aes_key_hex;
+		}
+		wprintf(L"You can now re-launch this application and decrypt all of your files\r\n"
+			L"using the new key(s).\r\n");
+	} else {
+		cl_wprintf(RED, L"Error!\r\n");
+		wprintf(L"Errors while parsing the log file.\r\n"
+			L"See log file for details.\r\n");
+	}
+
+	return bRetVal;
+}
+#pragma endregion

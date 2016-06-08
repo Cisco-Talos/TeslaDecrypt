@@ -15,6 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AlphaCrypt.cpp">
+      <Filter>File di origine</Filter>
+    </ClCompile>
+    <ClCompile Include="EcFactorizer.cpp">
+      <Filter>File di origine</Filter>
+    </ClCompile>
     <ClCompile Include="entrypoint.cpp">
       <Filter>File di origine</Filter>
     </ClCompile>
@@ -30,11 +36,14 @@
     <ClCompile Include="TeslaDecrypterApp.cpp">
       <Filter>File di origine</Filter>
     </ClCompile>
-    <ClCompile Include="AlphaCrypt.cpp">
-      <Filter>File di origine</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AlphaCrypt.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
+    <ClInclude Include="EcFactorizer.h">
+      <Filter>File di intestazione</Filter>
+    </ClInclude>
     <ClInclude Include="Log.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
@@ -51,9 +60,6 @@
       <Filter>File di intestazione</Filter>
     </ClInclude>
     <ClInclude Include="TeslaDecrypterApp.h">
-      <Filter>File di intestazione</Filter>
-    </ClInclude>
-    <ClInclude Include="AlphaCrypt.h">
       <Filter>File di intestazione</Filter>
     </ClInclude>
   </ItemGroup>
